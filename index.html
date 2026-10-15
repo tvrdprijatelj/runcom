@@ -1,197 +1,29 @@
 <!doctype html>
-<html lang="sv">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Download — runcom</title>
+  <title>runcom — Download (Choose language)</title>
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; max-width:900px; margin:2rem auto; padding:0 1rem; color:#111 }
-    header { display:flex; align-items:center; gap:1rem }
-    h1 { margin:0; font-size:1.4rem }
-    .card { border:1px solid #ddd; border-radius:8px; padding:1rem; margin-top:1rem; background:#fff }
-    button { background:#0366d6; color:white; border:none; padding:0.5rem 0.8rem; border-radius:6px; cursor:pointer }
-    button:disabled { opacity:0.6; cursor:default }
-    a { color:#0366d6 }
-    pre { background:#f6f8fa; padding:1rem; border-radius:6px; overflow:auto }
-    .muted { color:#555; font-size:0.9rem }
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; margin:0; min-height:100vh; display:flex;align-items:center;justify-content:center;background:#0b1020;color:#eef}
+    .box{width:min(760px,96%);background:linear-gradient(180deg,#07101a, #0d1b2b);border-radius:16px;padding:28px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 12px 40px rgba(2,6,23,0.6)}
+    h1{margin:0 0 8px;font-size:1.6rem}
+    p{margin:0 0 18px;color:#bcd}
+    .langs{display:flex;gap:12px;flex-wrap:wrap}
+    a.lang{flex:1;min-width:160px;text-align:center;padding:14px 16px;border-radius:12px;text-decoration:none;font-weight:700;color:#06111f;background:linear-gradient(135deg,#76a9ff,#90baff);box-shadow:0 10px 24px rgba(118,169,255,0.16)}
+    a.lang.secondary{background:linear-gradient(135deg,#7ef2c9,#46d2ff)}
+    .note{margin-top:12px;color:#9fb}
   </style>
 </head>
 <body>
-  <header>
-    <h1>runcom — Nedladdning</h1>
-  </header>
-
-  <div class="card" id="releaseCard">
-    <div id="status">Hämtar senaste release från GitHub…</div>
-    <div id="releaseInfo" style="display:none">
-      <p><strong>Release:</strong> <span id="tag"></span> &nbsp; <span class="muted" id="published"></span></p>
-      <p id="body" class="muted"></p>
-
-      <div id="links"></div>
-
-      <p style="margin-top:0.8rem">
-        <button id="downloadAllBtn">Ladda ner allt</button>
-        <button id="autoDownloadZipBtn">Ladda ner zip</button>
-      </p>
-
-      <div id="extras" style="margin-top:1rem"></div>
+  <div class="box">
+    <h1>runcom — Download</h1>
+    <p>Choose your language to continue and download the latest release and dependencies.</p>
+    <div class="langs">
+      <a class="lang" href="/runcom/download_en.html">English</a>
+      <a class="lang secondary" href="/runcom/download_sv.html">Svenska</a>
     </div>
+    <p class="note">You will be taken to a page that automatically shows the latest GitHub release and resources.</p>
   </div>
-
-  <script>
-    (function(){
-      const owner = 'tvrdprijatelj';
-      const repo = 'runcom';
-      const api = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
-      const rawBase = `https://raw.githubusercontent.com/${owner}/${repo}/main`;
-
-      const statusEl = document.getElementById('status');
-      const releaseInfoEl = document.getElementById('releaseInfo');
-      const tagEl = document.getElementById('tag');
-      const publishedEl = document.getElementById('published');
-      const bodyEl = document.getElementById('body');
-      const linksEl = document.getElementById('links');
-      const extrasEl = document.getElementById('extras');
-      const downloadAllBtn = document.getElementById('downloadAllBtn');
-      const autoDownloadZipBtn = document.getElementById('autoDownloadZipBtn');
-
-      let downloadUrls = [];
-
-      function formatDate(iso) {
-        try { return new Date(iso).toLocaleString(); } catch(e){ return iso; }
-      }
-
-      function makeLink(href, text, filename) {
-        const a = document.createElement('a');
-        a.href = href;
-        a.textContent = text;
-        a.target = '_blank';
-        if (filename) a.setAttribute('download', filename);
-        return a;
-      }
-
-      function startDownload(url, filename) {
-        // Try programmatic download (may be blocked for cross-origin), fallback opens in new tab
-        const a = document.createElement('a');
-        a.href = url;
-        if (filename) a.setAttribute('download', filename);
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        try { a.click(); } catch(e) { window.open(url, '_blank'); }
-        document.body.removeChild(a);
-      }
-
-      fetch(api, { headers: { Accept: 'application/vnd.github.v3+json' } })
-        .then(res => {
-          if (!res.ok) throw new Error('GitHub API returned ' + res.status);
-          return res.json();
-        })
-        .then(release => {
-          statusEl.style.display = 'none';
-          releaseInfoEl.style.display = 'block';
-
-          tagEl.textContent = release.tag_name || '—';
-          publishedEl.textContent = release.published_at ? 'publicerad: ' + formatDate(release.published_at) : '';
-          bodyEl.textContent = release.body || '';
-
-          // Add zipball/tarball
-          if (release.zipball_url) {
-            const zipUrl = release.zipball_url;
-            const p = document.createElement('p');
-            p.appendChild(makeLink(zipUrl, 'Hämta ZIP (alla filer från release)', `${repo}-${release.tag_name || 'latest'}.zip`));
-            linksEl.appendChild(p);
-            downloadUrls.push({url: zipUrl, name: `${repo}-${release.tag_name || 'latest'}.zip`});
-          }
-          if (release.tarball_url) {
-            const tarUrl = release.tarball_url;
-            const p2 = document.createElement('p');
-            p2.appendChild(makeLink(tarUrl, 'Hämta tarball (tar.gz)', `${repo}-${release.tag_name || 'latest'}.tar.gz`));
-            linksEl.appendChild(p2);
-            downloadUrls.push({url: tarUrl, name: `${repo}-${release.tag_name || 'latest'}.tar.gz`});
-          }
-
-          // Assets (if any)
-          if (release.assets && release.assets.length) {
-            const assetsH = document.createElement('h4'); assetsH.textContent = 'Assets:';
-            linksEl.appendChild(assetsH);
-            release.assets.forEach(a => {
-              const p = document.createElement('p');
-              p.appendChild(makeLink(a.browser_download_url, a.name));
-              linksEl.appendChild(p);
-              downloadUrls.push({url: a.browser_download_url, name: a.name});
-            });
-          } else {
-            const p = document.createElement('p');
-            p.className = 'muted';
-            p.textContent = 'Inga assets i releasen. ZIP/tarball finns dock ovan.';
-            linksEl.appendChild(p);
-          }
-
-          // Try to fetch common dependency files (requirements.txt)
-          const reqUrl = `${rawBase}/requirements.txt`;
-          fetch(reqUrl, { method: 'GET' })
-            .then(r => {
-              if (!r.ok) throw new Error('no file');
-              return r.text();
-            })
-            .then(text => {
-              const exTitle = document.createElement('h4'); exTitle.textContent = 'Dependencies:';
-              extrasEl.appendChild(exTitle);
-
-              const pre = document.createElement('pre');
-              pre.textContent = text;
-              extrasEl.appendChild(pre);
-
-              const pipCmd = document.createElement('p');
-              pipCmd.innerHTML = '<strong>Installera:</strong> <code>pip install -r requirements.txt</code>';
-              extrasEl.appendChild(pipCmd);
-
-              const dlA = makeLink(reqUrl, 'Hämta requirements.txt', 'requirements.txt');
-              extrasEl.appendChild(dlA);
-
-              // add to downloadAll
-              downloadUrls.push({url: reqUrl, name: 'requirements.txt'});
-            })
-            .catch(()=> {
-              // file not present — ignore silently
-            });
-
-        })
-        .catch(err => {
-          statusEl.textContent = 'Kunde inte hämta release: ' + err.message + '. Kontrollera att repot är offentligt eller prova senare.';
-        });
-
-      downloadAllBtn.addEventListener('click', () => {
-        if (!downloadUrls.length) {
-          alert('Inga filer hittade att ladda ner.');
-          return;
-        }
-        // Try to download sequentially to avoid flooding browser
-        (async function(){
-          downloadAllBtn.disabled = true;
-          downloadAllBtn.textContent = 'Laddar ner...';
-          for (const item of downloadUrls) {
-            try {
-              startDownload(item.url, item.name);
-              // small delay between downloads
-              await new Promise(r => setTimeout(r, 800));
-            } catch(e) {
-              console.warn('download failed', item, e);
-            }
-          }
-          downloadAllBtn.textContent = 'Ladda ner allt';
-          downloadAllBtn.disabled = false;
-          alert('Nedladdningsförsök gjort. Om webbläsaren blockerar flera automatiska nedladdningar, använd länkarna ovan.');
-        })();
-      });
-
-      autoDownloadZipBtn.addEventListener('click', () => {
-        const zip = downloadUrls.find(x => x.url && x.name && x.name.endsWith('.zip')) || downloadUrls[0];
-        if (!zip) { alert('Ingen nedladdningsbar fil hittades.'); return; }
-        startDownload(zip.url, zip.name);
-      });
-
-    })();
-  </script>
 </body>
 </html>
