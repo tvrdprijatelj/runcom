@@ -14,13 +14,14 @@
     h1{margin:0}
     p.lead{color:var(--muted);margin:6px 0 12px}
     .actions{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap}
-    .btn{padding:12px 14px;border-radius:10px;text-decoration:none;font-weight:800;display:inline-block}
+    .btn{padding:12px 14px;border-radius:10px;text-decoration:none;font-weight:800;display:inline-block;border:none;cursor:pointer}
     .primary{background:linear-gradient(135deg,#76a9ff,#90baff);color:#05111a}
     .secondary{background:rgba(255,255,255,0.03);color:#eaf;border:1px solid rgba(255,255,255,0.03)}
     .panel{margin-top:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02)}
     pre{background:rgba(0,0,0,0.45);padding:10px;border-radius:8px;overflow:auto}
     .note{color:var(--muted)}
     .small{font-size:0.95rem;color:var(--muted)}
+    .status{margin-top:10px;color:var(--muted)}
     @media(max-width:720px){.actions{flex-direction:column}.btn{width:100%}}
   </style>
 </head>
@@ -35,14 +36,16 @@
     </div>
 
     <div class="actions">
-      <a class="btn primary" href="https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh" download="install.sh">Ladda ner installer — macOS / Linux</a>
-      <a class="btn secondary" href="https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1" download="install.ps1">Ladda ner installer — Windows (PowerShell)</a>
+      <button id="dl-unix" class="btn primary">Ladda ner installer — Linux / macOS</button>
+      <button id="dl-win" class="btn secondary">Ladda ner installer — Windows</button>
     </div>
+
+    <div id="status" class="status">&nbsp;</div>
 
     <div class="panel">
       <h3>Vad installern gör</h3>
       <ul class="note">
-        <li>hämtar senaste GitHub-release för projektet</li>
+        <li>hämtar senaste GitHub-release</li>
         <li>laddar ner och packar upp releasen</li>
         <li>skapar en Python virtual environment</li>
         <li>installerar pip-beroenden från requirements.txt om filen finns</li>
@@ -65,5 +68,47 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
 
     <div class="small" style="margin-top:12px;"><a href="download.html" style="color:var(--accent);text-decoration:none;">← Tillbaka till språkval</a></div>
   </div>
+
+  <script>
+    (function(){
+      const rawBase = 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main';
+      const unixUrl = rawBase + '/install.sh';
+      const winUrl = rawBase + '/install.ps1';
+      const statusEl = document.getElementById('status');
+
+      async function downloadRaw(url, filename) {
+        try {
+          statusEl.textContent = 'Hämtar...';
+          const res = await fetch(url, { mode: 'cors' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+
+          const blob = await res.blob();
+          const objectUrl = URL.createObjectURL(blob);
+
+          const a = document.createElement('a');
+          a.href = objectUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+
+          URL.revokeObjectURL(objectUrl);
+          statusEl.textContent = 'Nedladdning startad. Kolla din nedladdningsmapp.';
+        } catch (err) {
+          console.warn('download via fetch failed:', err);
+          statusEl.textContent = 'Webbläsaren blockerade nedladdningen. Öppnar raw-filen så du kan spara den manuellt...';
+          window.open(url, '_blank', 'noopener');
+        }
+      }
+
+      document.getElementById('dl-unix').addEventListener('click', function(){
+        downloadRaw(unixUrl, 'install.sh');
+      });
+
+      document.getElementById('dl-win').addEventListener('click', function(){
+        downloadRaw(winUrl, 'install.ps1');
+      });
+    })();
+  </script>
 </body>
 </html>
