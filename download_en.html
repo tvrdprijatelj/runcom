@@ -14,7 +14,7 @@
     h1{margin:0}
     p.lead{color:var(--muted);margin:6px 0 12px}
     .actions{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap}
-    .btn{padding:12px 14px;border-radius:10px;text-decoration:none;font-weight:800;display:inline-block}
+    .btn{padding:12px 14px;border-radius:10px;text-decoration:none;font-weight:800;display:inline-block;border:none;cursor:pointer}
     .primary{background:linear-gradient(135deg,#76a9ff,#90baff);color:#05111a}
     .secondary{background:rgba(255,255,255,0.03);color:#eaf;border:1px solid rgba(255,255,255,0.03)}
     .panel{margin-top:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02)}
@@ -53,7 +53,7 @@
       </ul>
 
       <h4>Recommended usage</h4>
-      <pre id="cmds">curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+      <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
 less install.sh
 bash install.sh
 
@@ -72,32 +72,42 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
   <script>
     (function(){
       const rawBase = 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main';
-      const unixUrl = `${rawBase}/install.sh`;
-      const winUrl = `${rawBase}/install.ps1`;
+      const unixUrl = rawBase + '/install.sh';
+      const winUrl = rawBase + '/install.ps1';
       const statusEl = document.getElementById('status');
-      const dlUnix = document.getElementById('dl-unix');
-      const dlWin = document.getElementById('dl-win');
 
-      async function streamDownload(url, filename){
-        try{
+      async function downloadRaw(url, filename) {
+        try {
           statusEl.textContent = 'Downloading...';
-          const res = await fetch(url, {mode: 'cors'});
-          if(!res.ok) throw new Error('Network error: '+res.status);
+          const res = await fetch(url, { mode: 'cors' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+
           const blob = await res.blob();
-          const href = URL.createObjectURL(blob);
+          const objectUrl = URL.createObjectURL(blob);
+
           const a = document.createElement('a');
-          a.href = href; a.download = filename; document.body.appendChild(a); a.click();
+          a.href = objectUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
           a.remove();
-          URL.revokeObjectURL(href);
+
+          URL.revokeObjectURL(objectUrl);
           statusEl.textContent = 'Download started. Check your downloads folder.';
-        }catch(err){
-          console.error(err);
-          statusEl.textContent = 'Download failed: '+err.message+'. Use the manual link or right-click → Save as.';
+        } catch (err) {
+          console.warn('download via fetch failed:', err);
+          statusEl.textContent = 'Browser blocked direct download. Opening raw file so you can Save As...';
+          window.open(url, '_blank', 'noopener');
         }
       }
 
-      dlUnix.addEventListener('click', ()=>{ streamDownload(unixUrl,'install.sh'); });
-      dlWin.addEventListener('click', ()=>{ streamDownload(winUrl,'install.ps1'); });
+      document.getElementById('dl-unix').addEventListener('click', function(){
+        downloadRaw(unixUrl, 'install.sh');
+      });
+
+      document.getElementById('dl-win').addEventListener('click', function(){
+        downloadRaw(winUrl, 'install.ps1');
+      });
     })();
   </script>
 </body>
