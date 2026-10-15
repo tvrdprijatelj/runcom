@@ -21,6 +21,7 @@
     pre{background:rgba(0,0,0,0.45);padding:10px;border-radius:8px;overflow:auto}
     .note{color:var(--muted)}
     .small{font-size:0.95rem;color:var(--muted)}
+    .status{margin-top:10px;color:var(--muted)}
     @media(max-width:720px){.actions{flex-direction:column}.btn{width:100%}}
   </style>
 </head>
@@ -35,22 +36,24 @@
     </div>
 
     <div class="actions">
-      <a class="btn primary" href="https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh" download="install.sh">Download installer — macOS / Linux</a>
-      <a class="btn secondary" href="https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1" download="install.ps1">Download installer — Windows (PowerShell)</a>
+      <button id="dl-unix" class="btn primary">Download installer — Linux / macOS</button>
+      <button id="dl-win" class="btn secondary">Download installer — Windows</button>
     </div>
+
+    <div id="status" class="status">&nbsp;</div>
 
     <div class="panel">
       <h3>What the installer does</h3>
       <ul class="note">
-        <li>queries GitHub for the newest release of this project</li>
+        <li>queries GitHub for the newest release</li>
         <li>downloads the release archive</li>
-        <li>creates a virtual environment using Python 3</li>
+        <li>creates a Python virtual environment</li>
         <li>installs pip dependencies from requirements.txt if present</li>
-        <li>asks before installing system-level Python if it is missing</li>
+        <li>asks before installing system Python if it is missing</li>
       </ul>
 
       <h4>Recommended usage</h4>
-      <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+      <pre id="cmds">curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
 less install.sh
 bash install.sh
 
@@ -65,5 +68,37 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
 
     <div class="small" style="margin-top:12px;"><a href="download.html" style="color:var(--accent);text-decoration:none;">← Back to language selector</a></div>
   </div>
+
+  <script>
+    (function(){
+      const rawBase = 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main';
+      const unixUrl = `${rawBase}/install.sh`;
+      const winUrl = `${rawBase}/install.ps1`;
+      const statusEl = document.getElementById('status');
+      const dlUnix = document.getElementById('dl-unix');
+      const dlWin = document.getElementById('dl-win');
+
+      async function streamDownload(url, filename){
+        try{
+          statusEl.textContent = 'Downloading...';
+          const res = await fetch(url, {mode: 'cors'});
+          if(!res.ok) throw new Error('Network error: '+res.status);
+          const blob = await res.blob();
+          const href = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = href; a.download = filename; document.body.appendChild(a); a.click();
+          a.remove();
+          URL.revokeObjectURL(href);
+          statusEl.textContent = 'Download started. Check your downloads folder.';
+        }catch(err){
+          console.error(err);
+          statusEl.textContent = 'Download failed: '+err.message+'. Use the manual link or right-click → Save as.';
+        }
+      }
+
+      dlUnix.addEventListener('click', ()=>{ streamDownload(unixUrl,'install.sh'); });
+      dlWin.addEventListener('click', ()=>{ streamDownload(winUrl,'install.ps1'); });
+    })();
+  </script>
 </body>
 </html>
