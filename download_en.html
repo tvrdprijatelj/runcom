@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>runcom — Download (English)</title>
+  <style>
+    :root{--bg:#071026;--panel:#081423;--accent:#46d2ff;--accent2:#7ef2c9;--muted:#9fb}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:linear-gradient(180deg,var(--bg),#071022);color:#eaf;display:flex;align-items:center;justify-content:center;padding:36px}
+    .card{width:min(980px,98%);background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:18px;padding:28px;border:1px solid rgba(255,255,255,0.04);box-shadow:0 18px 40px rgba(2,6,23,0.6)}
+    .hdr{display:flex;align-items:center;gap:14px}
+    .logo{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-weight:900;color:#06111f}
+    h1{margin:0;font-size:1.6rem}
+    .lead{color:var(--muted);margin-top:6px}
+    .meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.02);align-items:center}
+    .tag{background:rgba(118,169,255,0.12);padding:8px 12px;border-radius:999px;font-weight:700}
+    .published{color:var(--muted)}
+    .body{margin-top:12px;color:#dfe}
+    .actions{display:flex;gap:12px;margin-top:18px}
+    button{border:none;border-radius:12px;padding:10px 14px;font-weight:800;cursor:pointer}
+    .primary{background:linear-gradient(135deg,#76a9ff,#90baff);color:#06111f}
+    .secondary{background:rgba(255,255,255,0.03);color:#eaf;border:1px solid rgba(255,255,255,0.03)}
+    .downloads{margin-top:14px;display:grid;gap:10px}
+    .dl{display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+    .dl a{color:var(--accent);text-decoration:none;font-weight:700}
+    .deps{margin-top:18px;border-top:1px solid rgba(255,255,255,0.03);padding-top:14px}
+    pre{background:rgba(0,0,0,0.45);padding:12px;border-radius:10px;overflow:auto}
+    .note{color:var(--muted);margin-top:10px}
+    @media(max-width:720px){.actions{flex-direction:column}button{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="card" role="main">
+    <div class="hdr">
+      <div class="logo">R</div>
+      <div>
+        <h1>runcom — Download</h1>
+        <div class="lead">Get the latest release, assets, and installation instructions.</div>
+      </div>
+    </div>
+
+    <div id="status" class="note">Fetching latest release from GitHub…</div>
+
+    <div id="releaseInfo" style="display:none">
+      <div class="meta">
+        <div class="tag" id="tag">—</div>
+        <div class="published" id="published"></div>
+      </div>
+
+      <div id="body" class="body"></div>
+
+      <div class="actions">
+        <button id="downloadAllBtn" class="primary">Download all</button>
+        <button id="autoDownloadZipBtn" class="secondary">Download ZIP</button>
+      </div>
+
+      <div id="links" class="downloads"></div>
+
+      <div id="extras" class="deps"></div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const owner='tvrdprijatelj', repo='runcom';
+      const api=`https://api.github.com/repos/${owner}/${repo}/releases/latest`;
+      const rawBase=`https://raw.githubusercontent.com/${owner}/${repo}/main`;
+
+      const statusEl=document.getElementById('status');
+      const releaseInfoEl=document.getElementById('releaseInfo');
+      const tagEl=document.getElementById('tag');
+      const publishedEl=document.getElementById('published');
+      const bodyEl=document.getElementById('body');
+      const linksEl=document.getElementById('links');
+      const extrasEl=document.getElementById('extras');
+      const downloadAllBtn=document.getElementById('downloadAllBtn');
+      const autoDownloadZipBtn=document.getElementById('autoDownloadZipBtn');
+
+      let downloadUrls=[];
+
+      function fmt(iso){try{return new Date(iso).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'})}catch(e){return iso}}
+
+      function addRow(label, href, name){
+        const row=document.createElement('div');row.className='dl';
+        const left=document.createElement('div');left.textContent=label;
+        const a=document.createElement('a');a.href=href;a.textContent=name; a.target='_blank'; a.rel='noopener';
+        row.appendChild(left);row.appendChild(a);linksEl.appendChild(row);
+      }
+
+      function startDownload(url,name){const a=document.createElement('a');a.href=url;if(name)a.setAttribute('download',name);a.style.display='none';document.body.appendChild(a);try{a.click()}catch(e){window.open(url,'_blank')}document.body.removeChild(a)}
+
+      fetch(api,{headers:{Accept:'application/vnd.github.v3+json'}}).then(r=>{if(!r.ok)throw new Error('GitHub API returned '+r.status);return r.json()}).then(release=>{
+        statusEl.style.display='none';releaseInfoEl.style.display='block';
+        tagEl.textContent=release.tag_name||'latest';publishedEl.textContent=release.published_at?('Published '+fmt(release.published_at)):' ';
+        bodyEl.textContent=release.body||'No release notes.';
+
+        if(release.zipball_url){const name=`${repo}-${release.tag_name||'latest'}.zip`;addRow('Zip',release.zipball_url,name);downloadUrls.push({url:release.zipball_url,name})}
+        if(release.tarball_url){const name=`${repo}-${release.tag_name||'latest'}.tar.gz`;addRow('Tarball',release.tarball_url,name);downloadUrls.push({url:release.tarball_url,name})}
+        if(release.assets&&release.assets.length){release.assets.forEach(a=>{const name=a.name||'asset';addRow('Asset',a.browser_download_url,name);downloadUrls.push({url:a.browser_download_url,name})})}else{const n=document.createElement('div');n.className='note';n.textContent='No separate release assets; use zip/tarball.';linksEl.appendChild(n)}
+
+        const reqUrl=`${rawBase}/requirements.txt`;
+        fetch(reqUrl).then(r=>{if(!r.ok)throw new Error('no file');return r.text()}).then(text=>{const h=document.createElement('h3');h.textContent='Dependencies';extrasEl.appendChild(h);const pre=document.createElement('pre');pre.textContent=text;extrasEl.appendChild(pre);const inst=document.createElement('div');inst.className='note';inst.innerHTML='<strong>Install:</strong> <code>pip install -r requirements.txt</code>';extrasEl.appendChild(inst);const a=document.createElement('a');a.href=reqUrl;a.textContent='Download requirements.txt';a.target='_blank';a.rel='noopener';a.className='note';extrasEl.appendChild(a);downloadUrls.push({url:reqUrl,name:'requirements.txt'})}).catch(()=>{});
+      }).catch(err=>{statusEl.textContent='Could not fetch release: '+err.message});
+
+      downloadAllBtn.addEventListener('click',async()=>{if(!downloadUrls.length){alert('No files found to download.');return}downloadAllBtn.disabled=true;downloadAllBtn.textContent='Starting…';for(const it of downloadUrls){try{startDownload(it.url,it.name);await new Promise(r=>setTimeout(r,700))}catch(e){console.warn('dl fail',it,e)}}downloadAllBtn.disabled=false;downloadAllBtn.textContent='Download all';alert('Downloads started. If blocked, use the links above.')});
+      autoDownloadZipBtn.addEventListener('click',()=>{const zip=downloadUrls.find(x=>x.name&&x.name.endsWith('.zip'))||downloadUrls[0];if(!zip){alert('No zip found.');return}startDownload(zip.url,zip.name)});
+    })();
+  </script>
+</body>
+</html>
