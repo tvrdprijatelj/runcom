@@ -22,6 +22,7 @@
     .note{color:var(--muted)}
     .small{font-size:0.95rem;color:var(--muted)}
     .status{margin-top:10px;color:var(--muted)}
+    a.raw-link{color:var(--accent)}
     @media(max-width:720px){.actions{flex-direction:column}.btn{width:100%}}
   </style>
 </head>
@@ -65,30 +66,23 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
       <h4>Säkerhet</h4>
       <p class="note">Kör inte remote-skript utan att först granska dem. Installern frågar innan systemnivå-paket installeras.</p>
 
-      <h4>Nedladdningsinstruktion</h4>
-      <ol class="note">
-        <li><strong>Inspektera innan du kör:</strong> ladda ned och läs skriptet först.</li>
-        <li><strong>Linux / macOS:</strong>
-          <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+      <h4>Snabb nedladdning</h4>
+      <div class="note">
+        <ul>
+          <li><strong>Inspektera & kör — Linux / macOS</strong>
+            <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
 less install.sh
 bash install.sh</pre>
-        </li>
-        <li><strong>Windows (PowerShell):</strong>
-          <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
+          </li>
+          <li><strong>Windows (PowerShell)</strong>
+            <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
 notepad .\install.ps1
 powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
-        </li>
-        <li><strong>Direkt-pipe (inte rekommenderat):</strong>
-          <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh | bash</pre>
-          (Använd bara om du förstår riskerna och har granskat skriptet.)
-        </li>
-        <li><strong>Om webbläsaren visar ren text:</strong> högerklicka → Spara som, eller använd curl/Invoke-WebRequest-kommandona ovan. Nedladdningsknapparna på sidan försöker spara filen automatiskt; om webbläsaren blockerar det öppnas den i ny flik så att du kan spara den manuellt.</li>
-        <li><strong>Verifiera (valfritt):</strong> jämför SHA256 med en officiell CHECKSUMS-fil om sådan finns:
-          <pre>sha256sum install.sh   # Linux
-shasum -a 256 install.sh # macOS
-Get-FileHash .\install.ps1 -Algorithm SHA256 # PowerShell</pre>
-        </li>
-      </ol>
+          </li>
+          <li>Om webbläsaren visar skriptet som text: högerklicka → "Spara som", eller använd kommandona ovan. Knapparna på sidan försöker spara automatiskt och öppnar raw-filen i ny flik om det blockeras.</li>
+        </ul>
+      </div>
+
     </div>
 
     <div class="small" style="margin-top:12px;"><a href="download.html" style="color:var(--accent);text-decoration:none;">← Tillbaka till språkval</a></div>
@@ -101,28 +95,54 @@ Get-FileHash .\install.ps1 -Algorithm SHA256 # PowerShell</pre>
       const winUrl = rawBase + '/install.ps1';
       const statusEl = document.getElementById('status');
 
+      function isIOS() {
+        // iOS detection (covers iPhone/iPad/iPod and iPadOS Safari)
+        return /iP(hone|od|ad)/.test(navigator.platform) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
+      }
+
       async function downloadRaw(url, filename) {
+        statusEl.textContent = 'Hämtar...';
         try {
-          statusEl.textContent = 'Hämtar...';
-          const res = await fetch(url, { mode: 'cors' });
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+          const res = await fetch(url, { mode: 'cors', signal: controller.signal });
+          clearTimeout(timeoutId);
+
           if (!res.ok) throw new Error('HTTP ' + res.status);
 
-          const blob = await res.blob();
-          const objectUrl = URL.createObjectURL(blob);
+          // If response is opaque (CORS), fall back
+          if (res.type === 'opaque') throw new Error('Opaque response (CORS)');
 
+          const blob = await res.blob();
+
+          // iOS Safari: download attribute often not supported for blob URLs — open in new tab
+          if (isIOS()) {
+            const objectUrl = URL.createObjectURL(blob);
+            window.open(objectUrl, '_blank', 'noopener');
+            statusEl.innerHTML = 'Öppnade filen i ny flik — använd Dela → Spara i Filer för att spara den.';
+            // revoke later
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+            return;
+          }
+
+          // Normal flow: create object URL and use anchor download
+          const objectUrl = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = objectUrl;
-          a.download = filename;
+          a.download = filename || '';
           document.body.appendChild(a);
           a.click();
           a.remove();
-
-          URL.revokeObjectURL(objectUrl);
           statusEl.textContent = 'Nedladdning startad. Kolla din nedladdningsmapp.';
+
+          // revoke after short delay to ensure download started
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
         } catch (err) {
-          console.warn('download via fetch failed:', err);
-          statusEl.textContent = 'Webbläsaren blockerade nedladdningen. Öppnar raw-filen så du kan spara den manuellt...';
-          window.open(url, '_blank', 'noopener');
+          console.warn('download failed', err);
+          // Provide helpful fallback and visible raw link
+          statusEl.innerHTML = 'Automatisk nedladdning misslyckades: ' + (err.message || err) + '. <a class="raw-link" href="' + url + '" target="_blank" rel="noopener">Öppna raw-filen</a>';
+          try { window.open(url, '_blank', 'noopener'); } catch(e) { /* ignore */ }
         }
       }
 
