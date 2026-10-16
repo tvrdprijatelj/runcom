@@ -44,44 +44,33 @@
     <div id="status" class="status">&nbsp;</div>
 
     <div class="panel">
-      <h3>What the installer does</h3>
-      <ul class="note">
-        <li>queries GitHub for the newest release</li>
-        <li>downloads the release archive</li>
-        <li>creates a Python virtual environment</li>
-        <li>installs pip dependencies from requirements.txt if present</li>
-        <li>asks before installing system Python if it is missing</li>
-      </ul>
-
-      <h4>Recommended usage</h4>
-      <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
-less install.sh
-bash install.sh
-
-# Windows PowerShell
-Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
-notepad .\install.ps1
-powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
-
-      <h4>Security notice</h4>
-      <p class="note">Do not run remote scripts without inspecting them first. The installer asks before performing system-level package installs.</p>
-
-      <h4>Quick download</h4>
+      <h3>Quick steps</h3>
       <div class="note">
-        <ul>
-          <li><strong>Inspect & run — Linux / macOS</strong>
+        <ol>
+          <li><strong>Download and open (Linux / macOS)</strong>
             <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
-less install.sh
-bash install.sh</pre>
+less install.sh</pre>
           </li>
-          <li><strong>Windows (PowerShell)</strong>
+          <li><strong>Run (Linux / macOS)</strong>
+            <pre>bash install.sh</pre>
+          </li>
+          <li><strong>Download and open (Windows PowerShell)</strong>
             <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
-notepad .\install.ps1
-powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
+notepad .\install.ps1</pre>
           </li>
-          <li>If the browser shows the script as plain text: right-click → “Save as…” or use the commands above. The page buttons try an automatic save and will open the raw file in a new tab if blocked.</li>
-          <li><strong>Warning:</strong> always inspect remote scripts before running.</li>
-        </ul>
+          <li><strong>Run (Windows)</strong>
+            <pre>powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
+          </li>
+        </ol>
+      </div>
+
+      <h4>Quick test in a VM</h4>
+      <div class="note">
+        <ol>
+          <li>In the project folder run: <pre>python3 -m http.server 8000</pre></li>
+          <li>Open a browser to: <pre>http://localhost:8000/download_en.html</pre></li>
+          <li>Click the download buttons and check your Downloads folder.</li>
+        </ol>
       </div>
 
     </div>
@@ -97,12 +86,11 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
       const statusEl = document.getElementById('status');
 
       function isIOS() {
-        // iOS detection (covers iPhone/iPad/iPod and iPadOS Safari)
         return /iP(hone|od|ad)/.test(navigator.platform) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
       }
 
       async function downloadRaw(url, filename) {
-        statusEl.textContent = 'Preparing download...';
+        statusEl.textContent = 'Preparing...';
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 15000);
@@ -111,23 +99,18 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
           clearTimeout(timeoutId);
 
           if (!res.ok) throw new Error('HTTP ' + res.status);
-
-          // If response is opaque (CORS), fall back
-          if (res.type === 'opaque') throw new Error('Opaque response (CORS)');
+          if (res.type === 'opaque') throw new Error('Opaque response');
 
           const blob = await res.blob();
 
-          // iOS Safari: download attribute often not supported for blob URLs — open in new tab
           if (isIOS()) {
             const objectUrl = URL.createObjectURL(blob);
             window.open(objectUrl, '_blank', 'noopener');
-            statusEl.innerHTML = 'Opened file in new tab — use Share → Save to Files to store it.';
-            // revoke later
+            statusEl.textContent = 'Opened in new tab.';
             setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
             return;
           }
 
-          // Normal flow: create object URL and use anchor download
           const objectUrl = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = objectUrl;
@@ -135,15 +118,12 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
           document.body.appendChild(a);
           a.click();
           a.remove();
-          statusEl.textContent = 'Download started. Check your downloads folder.';
-
-          // revoke after short delay to ensure download started
+          statusEl.textContent = 'Download started.';
           setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
         } catch (err) {
           console.warn('download failed', err);
-          // Provide helpful fallback and visible raw link
-          statusEl.innerHTML = 'Automatic download failed: ' + (err.message || err) + '. <a class="raw-link" href="' + url + '" target="_blank" rel="noopener">Open raw file</a>';
-          try { window.open(url, '_blank', 'noopener'); } catch(e) { /* ignore */ }
+          statusEl.innerHTML = 'Automatic download failed. <a class="raw-link" href="' + url + '" target="_blank" rel="noopener">Open raw file</a>';
+          try { window.open(url, '_blank', 'noopener'); } catch(e) {}
         }
       }
 
