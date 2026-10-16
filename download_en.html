@@ -2,6 +2,9 @@
 .runcom-guide{max-width:52rem;line-height:1.6}
 .runcom-guide h3{margin:2rem 0 .5rem}
 .runcom-guide p{margin:.4rem 0 1rem}
+.runcom-guide .download-actions{display:flex;flex-wrap:wrap;gap:.75rem;margin:1rem 0 1.5rem}
+.runcom-guide .download-btn{display:inline-flex;align-items:center;justify-content:center;padding:.8rem 1rem;border-radius:8px;border:1px solid rgba(128,128,128,.5);background:linear-gradient(135deg,#76a9ff,#90baff);color:#05111a;text-decoration:none;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.runcom-guide .download-btn.secondary{background:rgba(255,255,255,.04);color:#ebf1ff;border-color:rgba(255,255,255,.18)}
 .runcom-guide .os{display:grid;grid-template-columns:9.5rem minmax(0,1fr);gap:.5rem 1.25rem;padding:1rem 0;border-top:1px solid rgba(128,128,128,.3)}
 .runcom-guide .os-list .os:last-child{border-bottom:1px solid rgba(128,128,128,.3)}
 .runcom-guide .os header{display:flex;flex-direction:column;align-items:flex-start;gap:.5rem}
@@ -15,9 +18,14 @@
 .runcom-guide .copy{font:inherit;font-size:.85rem;padding:.2rem .7rem;color:inherit;background:transparent;border:1px solid rgba(128,128,128,.5);border-radius:4px;cursor:pointer}
 .runcom-guide .copy:hover{background:rgba(128,128,128,.15)}
 .runcom-guide .copy:focus-visible{outline:2px solid #3a9d94;outline-offset:2px}
-@media (max-width:600px){.runcom-guide .os{grid-template-columns:1fr}.runcom-guide .os header{flex-direction:row;align-items:center;justify-content:space-between}}
+@media (max-width:600px){.runcom-guide .os{grid-template-columns:1fr}.runcom-guide .os header{flex-direction:row;align-items:center;justify-content:space-between}.runcom-guide .download-actions{flex-direction:column}.runcom-guide .download-btn{width:100%}}
 </style>
 <div class="runcom-guide" data-copy="Copy" data-copied="Copied!">
+  <div class="download-actions">
+    <a class="download-btn" href="https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh" download>Download install.sh (Linux / macOS)</a>
+    <a class="download-btn secondary" href="https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1" download>Download install.ps1 (Windows)</a>
+  </div>
+
   <h3>Quick steps (by operating system)</h3>
   <p>First download the install script, review it, then run it. Pick your operating system below.</p>
   <p>On macOS and Linux, <code>less</code> lets you read the script – press <kbd>q</kbd> to exit.</p>
