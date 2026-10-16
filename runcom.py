@@ -87,8 +87,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Runcom")
-        self.geometry("1100x720")
-        self.minsize(700, 450)
+        self.geometry("1180x780")
+        self.minsize(820, 540)
 
         self.mono = tkfont.nametofont("TkFixedFont").copy()
         self.mono.configure(size=11)
@@ -117,19 +117,39 @@ class App(tk.Tk):
 
     # ------------------------------------------------------------------ UI
     def _build_ui(self):
-        bar = tk.Frame(self, padx=6, pady=6)
+        self.configure(bg="#101722")
+        self.option_add("*Font", "{Segoe UI} 10" if IS_WIN else "{DejaVu Sans} 10")
+        self.option_add("*Background", "#182231")
+        self.option_add("*Foreground", "#e4ecf7")
+        self.option_add("*Button.Relief", "flat")
+        self.option_add("*Button.BorderWidth", 0)
+        self.option_add("*Button.Padx", 12)
+        self.option_add("*Button.Pady", 7)
+        self.option_add("*Button.ActiveBackground", "#30435e")
+        self.option_add("*Button.ActiveForeground", "#ffffff")
+        self.option_add("*Button.DisabledForeground", "#718198")
+        header = tk.Frame(self, padx=18, pady=14, bg="#101722")
+        header.pack(fill="x")
+        tk.Label(header, text="runcom", font=("TkDefaultFont", 23, "bold"),
+                 bg="#101722", fg="#77c7ff").pack(side="left")
+        tk.Label(header, text="Skriv. Kör. Se resultatet.", bg="#101722",
+                 fg="#a5b5cc", padx=20).pack(side="left")
+        bar = tk.Frame(self, padx=12, pady=6)
         bar.pack(fill="x")
         buttons = [
             (f"Ny ({MOD}+N)", self.new_file),
             (f"Öppna… ({MOD}+O)", self.open_file),
             (f"Spara ({MOD}+S)", self.save),
+            ("Spara som…", self.save_as),
             ("Ta bort", self.delete_file),
             ("Byt mapp…", self.change_folder),
         ]
         for text, cmd in buttons:
             tk.Button(bar, text=text, command=cmd).pack(side="left", padx=2)
 
-        tk.Frame(bar, width=20).pack(side="left")
+        runbar = tk.Frame(self, padx=12, pady=8)
+        runbar.pack(fill="x")
+        bar = runbar
         self.btn_run = tk.Button(bar, text="▶ Kör här (F5)", command=self.run_in_app,
                                  bg="#2e7d32", fg="white", activebackground="#1b5e20")
         self.btn_run.pack(side="left", padx=2)
@@ -150,13 +170,22 @@ class App(tk.Tk):
 
         # Vänster: fillista
         left = tk.Frame(main)
-        self.folder_label = tk.Label(left, anchor="w", fg="#555", text="")
+        self.folder_label = tk.Label(left, anchor="w", fg="#a5b5cc", text="")
         self.folder_label.pack(fill="x", padx=4, pady=(4, 0))
         lf = tk.Frame(left)
         lf.pack(fill="both", expand=True, padx=4, pady=4)
         sb = tk.Scrollbar(lf)
         sb.pack(side="right", fill="y")
-        self.listbox = tk.Listbox(lf, yscrollcommand=sb.set, exportselection=False, activestyle="none")
+        self.search = tk.StringVar()
+        search = tk.Entry(left, textvariable=self.search, bg="#101722", fg="#e4ecf7",
+                          insertbackground="white", relief="flat")
+        search.pack(fill="x", padx=8, pady=8, before=lf)
+        tk.Label(left, text="Sök filnamn · dubbelklicka för att öppna", fg="#a5b5cc",
+                 font=("TkDefaultFont", 9)).pack(fill="x", before=search)
+        self.search.trace_add("write", lambda *_: self.refresh_list())
+        self.listbox = tk.Listbox(lf, yscrollcommand=sb.set, exportselection=False, activestyle="none",
+                                 bg="#101722", fg="#e4ecf7", selectbackground="#285a85",
+                                 selectforeground="white", relief="flat", borderwidth=0)
         self.listbox.pack(side="left", fill="both", expand=True)
         sb.config(command=self.listbox.yview)
         self.listbox.bind("<Double-Button-1>", self._on_list_open)
@@ -170,15 +199,26 @@ class App(tk.Tk):
         ef = tk.Frame(right)
         esb = tk.Scrollbar(ef)
         esb.pack(side="right", fill="y")
+        xsb = tk.Scrollbar(ef, orient="horizontal")
+        xsb.pack(side="bottom", fill="x")
         self.editor = tk.Text(ef, wrap="none", undo=True, font=self.mono,
+                              bg="#111b29", fg="#e4ecf7", insertbackground="#77c7ff",
+                              selectbackground="#285a85", padx=16, pady=14,
+                              relief="flat", xscrollcommand=xsb.set,
                               yscrollcommand=esb.set, tabs=("1c",))
         self.editor.pack(side="left", fill="both", expand=True)
         esb.config(command=self.editor.yview)
+        xsb.config(command=self.editor.xview)
         self.editor.bind("<<Modified>>", lambda e: self._update_title())
         right.add(ef, minsize=150, height=400)
 
         of = tk.Frame(right)
-        tk.Label(of, text="Utdata", anchor="w", font=tkfont.nametofont("TkDefaultFont")).pack(fill="x")
+        outputbar = tk.Frame(of)
+        outputbar.pack(fill="x")
+        tk.Label(outputbar, text="UTDATA", anchor="w", padx=10).pack(side="left")
+        tk.Button(outputbar, text="Rensa", command=self.clear_output).pack(side="right")
+        tk.Label(outputbar, text="Behöver skriptet inmatning? Använd Kör i terminal.",
+                 fg="#a5b5cc", font=("TkDefaultFont", 9)).pack(side="left", padx=12)
         osb = tk.Scrollbar(of)
         osb.pack(side="right", fill="y")
         self.output = tk.Text(of, height=10, wrap="word", state="disabled", bg="#1e1e1e", fg="#dcdcdc",
@@ -189,7 +229,8 @@ class App(tk.Tk):
         self.output.tag_config("err", foreground="#ff7b72")
         right.add(of, minsize=80)
 
-        self.status = tk.Label(self, anchor="w", relief="sunken", text="Redo")
+        self.status = tk.Label(self, anchor="w", padx=14, pady=8, bg="#101722", fg="#a5b5cc",
+                               text="Redo · Skapa en fil med Ctrl+N eller öppna med Ctrl+O")
         self.status.pack(fill="x", side="bottom")
 
     def _shortcut(self, fn):
@@ -198,7 +239,7 @@ class App(tk.Tk):
 
     def _bind_keys(self):
         mods = ["Control", "Command"] if IS_MAC else ["Control"]
-        actions = {"s": self.save, "n": self.new_file, "o": self.open_file}
+        actions = {"s": self.save, "n": self.new_file, "o": self.open_file, "Shift-S": self.save_as}
         for m in mods:
             for key, fn in actions.items():
                 for w in (self, self.editor):
@@ -246,7 +287,8 @@ class App(tk.Tk):
         self.listbox.delete(0, "end")
         try:
             self.files = sorted(
-                (p for p in self.folder.iterdir() if p.is_file() and not p.name.startswith(".")),
+                (p for p in self.folder.iterdir() if p.is_file() and not p.name.startswith(".")
+                 and self.search.get().casefold() in p.name.casefold()),
                 key=lambda p: p.name.lower(),
             )
         except OSError as e:
@@ -305,8 +347,8 @@ class App(tk.Tk):
         if not self._confirm_discard():
             return
         try:
-            text = path.read_text(encoding=file_encoding(path), errors="replace")
-        except OSError as e:
+            text = path.read_text(encoding=file_encoding(path))
+        except (OSError, UnicodeDecodeError) as e:
             messagebox.showerror("Kunde inte öppna", str(e))
             return
         if path.parent != self.folder:
@@ -320,14 +362,15 @@ class App(tk.Tk):
         if self.current is None:
             return self.save_as()
         # Linux/macOS: se till att filen har en shebang så att den går att köra direkt
-        if not IS_WIN and not self.editor.get("1.0", "end-1c").startswith("#!"):
+        if not IS_WIN and self.current.suffix.lower() in (".sh", ".bash", "") and not self.editor.get("1.0", "end-1c").startswith("#!"):
             self.editor.insert("1.0", SHEBANG)
         text = self.editor.get("1.0", "end-1c")
         if not text.endswith("\n"):
             text += "\n"
         try:
             self.current.write_text(text, encoding=file_encoding(self.current))
-            self._make_executable(self.current)
+            if not IS_WIN and text.startswith("#!"):
+                self._make_executable(self.current)
         except UnicodeEncodeError:
             messagebox.showerror("Kunde inte spara",
                                  "Filen innehåller tecken som inte finns i batchfilernas teckentabell "
@@ -346,9 +389,13 @@ class App(tk.Tk):
                                             defaultextension=DEFAULT_EXT)
         if not path:
             return False
-        self.current = Path(path)
+        previous, folder = self.current, self.folder
+        self.current = Path(path).resolve()
         self.folder = self.current.parent
         ok = self.save()
+        if not ok:
+            self.current, self.folder = previous, folder
+            self._update_title()
         self.refresh_list()
         return ok
 
@@ -394,10 +441,14 @@ class App(tk.Tk):
     def _command_for(self, path, keep_open=False):
         """Kommandoraden som kör skriptet, eller None om filtypen inte stöds (Windows)."""
         if not IS_WIN:
+            if path.suffix.lower() == ".py":
+                return [sys.executable, "-u", str(path)]
+            if path.suffix.lower() in (".sh", ".bash"):
+                return ["bash", str(path)]
             return [str(path)]
         ext = path.suffix.lower()
         if ext in (".bat", ".cmd"):
-            return ["cmd.exe", "/k", str(path)] if keep_open else [str(path)]
+            return ["cmd.exe", "/d", "/k" if keep_open else "/c", str(path)]
         if ext == ".ps1":
             ps = shutil.which("pwsh") or shutil.which("powershell") or "powershell"
             flag = "-NoExit" if keep_open else "-NoProfile"
@@ -439,14 +490,17 @@ class App(tk.Tk):
         threading.Thread(target=self._reader, args=(self.proc,), daemon=True).start()
 
     def _reader(self, proc):
-        for line in proc.stdout:
-            self.q.put(("line", line))
-        proc.wait()
-        self.q.put(("done", proc.returncode))
+        try:
+            for line in proc.stdout:
+                self.q.put(("line", line))
+        finally:
+            proc.stdout.close()
+            proc.wait()
+            self.q.put(("done", proc.returncode))
 
     def _drain_queue(self):
         try:
-            while True:
+            for _ in range(200):
                 kind, val = self.q.get_nowait()
                 if kind == "line":
                     self._out(val)
@@ -470,14 +524,26 @@ class App(tk.Tk):
                                capture_output=True, creationflags=NO_WINDOW)
             else:
                 os.killpg(pid, signal.SIGTERM)
+                self.after(1500, lambda proc=self.proc: self._force_stop(proc))
             self._out("\n[Stoppad av användaren]\n", "err")
         except (ProcessLookupError, PermissionError, OSError):
             pass
 
+    def _force_stop(self, proc):
+        if proc is not None and proc.poll() is None:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except OSError:
+                pass
+
+    def clear_output(self):
+        self.output.config(state="normal")
+        self.output.delete("1.0", "end")
+        self.output.config(state="disabled")
+
     # ------------------------------------------------- terminal / admin
-    @staticmethod
-    def _unix_inner(path):
-        return (f"{shlex.quote(str(path))}; echo; "
+    def _unix_inner(self, path):
+        return (shlex.join(self._command_for(path)) + "; echo; "
                 "printf '[Klart - tryck Enter för att stänga] '; read -r _x")
 
     def run_in_terminal(self):
@@ -611,6 +677,8 @@ class App(tk.Tk):
             return
         if self.proc is not None:
             self.stop()
+            if not IS_WIN:
+                self._force_stop(self.proc)
         self._forget_sudo()
         self.destroy()
 
