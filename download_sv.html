@@ -1,44 +1,92 @@
-<h3>Snabba steg (per operativsystem)</h3>
-<div class="note">
-  <h4>macOS</h4>
-  <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+<style>
+.runcom-guide{max-width:52rem;line-height:1.6}
+.runcom-guide h3{margin:2rem 0 .5rem}
+.runcom-guide p{margin:.4rem 0 1rem}
+.runcom-guide .os{display:grid;grid-template-columns:9.5rem minmax(0,1fr);gap:.5rem 1.25rem;padding:1rem 0;border-top:1px solid rgba(128,128,128,.3)}
+.runcom-guide .os-list .os:last-child{border-bottom:1px solid rgba(128,128,128,.3)}
+.runcom-guide .os header{display:flex;flex-direction:column;align-items:flex-start;gap:.5rem}
+.runcom-guide h4{margin:0;font-size:1rem}
+.runcom-guide pre{margin:0;padding:.85rem 1rem;background:#1f2a37;color:#e5e9ee;border-left:3px solid #3a9d94;border-radius:4px;overflow-x:auto;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.runcom-guide pre code{font:inherit}
+.runcom-guide :not(pre)>code,.runcom-guide kbd{padding:.05em .35em;border:1px solid rgba(128,128,128,.4);border-radius:3px;font:.9em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.runcom-guide ol{padding-left:1.25rem}
+.runcom-guide li{margin:.5rem 0 1rem}
+.runcom-guide li pre{margin-top:.5rem}
+.runcom-guide .copy{font:inherit;font-size:.85rem;padding:.2rem .7rem;color:inherit;background:transparent;border:1px solid rgba(128,128,128,.5);border-radius:4px;cursor:pointer}
+.runcom-guide .copy:hover{background:rgba(128,128,128,.15)}
+.runcom-guide .copy:focus-visible{outline:2px solid #3a9d94;outline-offset:2px}
+@media (max-width:600px){.runcom-guide .os{grid-template-columns:1fr}.runcom-guide .os header{flex-direction:row;align-items:center;justify-content:space-between}}
+</style>
+<div class="runcom-guide" data-copy="Kopiera" data-copied="Kopierat!">
+  <h3>Snabba steg (per operativsystem)</h3>
+  <p>Ladda först ned installationsskriptet, läs igenom det och kör det sedan. Välj ditt operativsystem nedan.</p>
+  <p>På macOS och Linux visar <code>less</code> skriptet så att du kan läsa det – avsluta med <kbd>q</kbd>.</p>
+  <div class="os-list">
+    <section class="os">
+      <header><h4>macOS</h4></header>
+      <pre><code>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
 less install.sh
-bash install.sh</pre>
-
-  <h4>Ubuntu / Debian</h4>
-  <pre>sudo apt update && sudo apt install -y curl
+bash install.sh</code></pre>
+    </section>
+    <section class="os">
+      <header><h4>Ubuntu / Debian</h4></header>
+      <pre><code>sudo apt update &amp;&amp; sudo apt install -y curl
 curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
 less install.sh
-bash install.sh</pre>
-
-  <h4>Fedora / RHEL</h4>
-  <pre>sudo dnf install -y curl
+bash install.sh</code></pre>
+    </section>
+    <section class="os">
+      <header><h4>Fedora / RHEL</h4></header>
+      <pre><code>sudo dnf install -y curl
 curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
 less install.sh
-bash install.sh</pre>
-
-  <h4>Arch Linux</h4>
-  <pre>sudo pacman -Syu --noconfirm curl
+bash install.sh</code></pre>
+    </section>
+    <section class="os">
+      <header><h4>Arch Linux</h4></header>
+      <pre><code>sudo pacman -S --needed curl
 curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
 less install.sh
-bash install.sh</pre>
-
-  <h4>Övriga Linux</h4>
-  <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+bash install.sh</code></pre>
+    </section>
+    <section class="os">
+      <header><h4>Andra Linux-distributioner</h4></header>
+      <pre><code>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
 less install.sh
-bash install.sh</pre>
-
-  <h4>Windows (PowerShell)</h4>
-  <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
+bash install.sh</code></pre>
+    </section>
+    <section class="os">
+      <header><h4>Windows (PowerShell)</h4></header>
+      <pre><code>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
 notepad .\install.ps1
-powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
-</div>
+powershell -ExecutionPolicy Bypass -File .\install.ps1</code></pre>
+    </section>
+  </div>
 
-<h4>Snabb test i en virtuell dator</h4>
-<div class="note">
+  <h3>Snabbtest i en virtuell maskin (VM)</h3>
   <ol>
-    <li>Gå till projektmappen och kör:<pre>python3 -m http.server 8000</pre></li>
-    <li>Öppna webbläsaren och gå till:<pre>http://localhost:8000/download_sv.html</pre></li>
-    <li>Klicka på nedladdningsknapparna och kontrollera Downloads-mappen.</li>
+    <li>Gå till projektmappen i en terminal och starta en lokal webbserver:<pre><code>python3 -m http.server 8000</code></pre></li>
+    <li>Öppna sidan i webbläsaren:<pre><code>http://localhost:8000/download_sv.html</code></pre></li>
+    <li>Klicka på nedladdningsknapparna och kontrollera att filerna hamnar i nedladdningsmappen (Downloads).</li>
+    <li>Stoppa webbservern med <kbd>Ctrl</kbd>+<kbd>C</kbd> när du är klar.</li>
   </ol>
 </div>
+<script>
+document.querySelectorAll('.runcom-guide').forEach(function(g){
+  if(g.dataset.ready||!navigator.clipboard)return;
+  g.dataset.ready='1';
+  g.querySelectorAll('.os').forEach(function(s){
+    var code=s.querySelector('pre'),head=s.querySelector('header');
+    if(!code||!head)return;
+    var b=document.createElement('button');
+    b.type='button';b.className='copy';b.textContent=g.dataset.copy;
+    b.addEventListener('click',function(){
+      navigator.clipboard.writeText(code.textContent).then(function(){
+        b.textContent=g.dataset.copied;
+        setTimeout(function(){b.textContent=g.dataset.copy},1800);
+      });
+    });
+    head.appendChild(b);
+  });
+});
+</script>
