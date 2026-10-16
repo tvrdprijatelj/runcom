@@ -89,6 +89,12 @@ finally:
         os.unlink(temporary)
 '@
     Invoke-Python -Exe $py -Arguments @('-c', $copy, (Join-Path $folder 'runcom.py'), $appPath)
+    foreach ($asset in @('help.html', 'help.css', 'style.css')) {
+        $assetSource = Join-Path $folder $asset
+        if (Test-Path $assetSource -PathType Leaf) {
+            Invoke-Python -Exe $py -Arguments @('-c', $copy, $assetSource, (Join-Path $InstallDir $asset))
+        }
+    }
     if (-not $NoShortcut) {
     try {
         $shell = New-Object -ComObject WScript.Shell

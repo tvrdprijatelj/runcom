@@ -19,6 +19,10 @@ Tkinter prerequisites:
 - Fedora: `sudo dnf install python3-tkinter python3-pip`
 - Windows/macOS: install Python with Tcl/Tk support from python.org.
 
+## Help
+
+Click **Hjälp** in the app or press **F1** for the detailed Swedish guide and FAQ. The installer includes `help.html`, `help.css` and `style.css` for offline reading. A standalone `runcom.py` falls back to the online guide: https://tvrdprijatelj.github.io/runcom/help.html. The website also has a Hjälp button.
+
 ## Use
 
 - Create a script with Ctrl+N, open with Ctrl+O, save with Ctrl+S, save as with Ctrl+Shift+S. macOS also supports Command.

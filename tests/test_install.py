@@ -57,6 +57,15 @@ else:
         self.assertIn('/zipball/main', requests)
         self.assertNotIn('releases/latest', requests)
 
+    def test_help_assets_are_available_offline(self):
+        self.archive({'release/runcom.py': 'print("installed")',
+                      **{'release/'+name: (ROOT/name).read_text(encoding='utf-8')
+                         for name in ('help.html','help.css','style.css')}})
+        result = self.run_installer('--ref','main')
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        for name in ('help.html','help.css','style.css'):
+            self.assertEqual((self.install/name).read_bytes(),(ROOT/name).read_bytes())
+
     def test_ref_is_url_encoded(self):
         result = self.run_installer('--ref', 'feature/new changes')
         self.assertEqual(result.returncode, 0, result.stdout+result.stderr)

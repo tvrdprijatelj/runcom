@@ -20,6 +20,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import webbrowser
 import tkinter as tk
 import tkinter.font as tkfont
 from pathlib import Path
@@ -35,6 +36,7 @@ NEW_CONSOLE = getattr(subprocess, "CREATE_NEW_CONSOLE", 0x00000010)
 
 DEFAULT_DIR = Path.home() / "skript"
 DEFAULT_EXT = ".bat" if IS_WIN else ".sh"
+HELP_URL = "https://tvrdprijatelj.github.io/runcom/help.html"
 
 SHEBANG = "#!/usr/bin/env bash\n"
 TPL_UNIX = SHEBANG + 'set -euo pipefail\n\n# Skriv dina kommandon här\necho "Hej från $(hostname)!"\n'
@@ -219,6 +221,9 @@ class App(tk.Tk):
                  bg="#101722", fg="#77c7ff").pack(side="left")
         tk.Label(header, text="Skriv. Kör. Se resultatet.", bg="#101722",
                  fg="#a5b5cc", padx=20).pack(side="left")
+        self.btn_help = tk.Button(header, text="Hjälp", command=self.open_help,
+                                  bg="#23334a", fg="#e4ecf7")
+        self.btn_help.pack(side="right")
         bar = tk.Frame(self, padx=12, pady=6)
         bar.pack(fill="x")
         buttons = [
@@ -316,6 +321,17 @@ class App(tk.Tk):
                                text="Redo · Skapa en fil med Ctrl+N eller öppna med Ctrl+O")
         self.status.pack(fill="x", side="bottom")
 
+    def open_help(self):
+        local = Path(__file__).resolve().with_name("help.html")
+        url = local.as_uri() if local.is_file() else HELP_URL
+        try:
+            if webbrowser.open(url, new=2):
+                return
+        except (OSError, webbrowser.Error):
+            pass
+        messagebox.showerror("Kunde inte öppna hjälpen",
+                             "Öppna hjälpen manuellt i din webbläsare:\n\n" + url, parent=self)
+
     def _shortcut(self, fn):
         fn()
         return "break"  # hindra Text-widgetens egna kortkommandon (t.ex. Ctrl+O)
@@ -327,6 +343,7 @@ class App(tk.Tk):
             for key, fn in actions.items():
                 for w in (self, self.editor):
                     w.bind(f"<{m}-{key}>", lambda e, f=fn: self._shortcut(f))
+        self.bind("<F1>", lambda e: self._shortcut(self.open_help))
         self.bind("<F5>", lambda e: self._shortcut(self.run_in_app))
         self.bind("<F6>", lambda e: self._shortcut(self.run_in_terminal))
 

@@ -14,10 +14,13 @@ try {
     $install = Join-Path $root 'app & space'
     foreach ($expected in @('installed', 'updated')) {
         $env:RUNCOM_TEST_VALUE = $expected
-        python -c 'import os,zipfile; z=zipfile.ZipFile(os.environ["RUNCOM_FIXTURE"],"w"); z.writestr("release/runcom.py", "print("+repr(os.environ["RUNCOM_TEST_VALUE"])+")"); z.close()'
+        python -c 'import os,zipfile; z=zipfile.ZipFile(os.environ["RUNCOM_FIXTURE"],"w"); z.writestr("release/runcom.py", "print("+repr(os.environ["RUNCOM_TEST_VALUE"])+")"); z.writestr("release/help.html","<h1>Help</h1>"); z.writestr("release/help.css","body{}"); z.writestr("release/style.css","body{}"); z.close()'
         if ($LASTEXITCODE) { throw 'Fixture generation failed.' }
         & (Join-Path $PSScriptRoot '..\install.ps1') -InstallDir $install -Ref main -NoShortcut
         $result = & (Join-Path $install 'venv\Scripts\python.exe') (Join-Path $install 'runcom.py')
+        foreach ($asset in @('help.html', 'help.css', 'style.css')) {
+            if (-not (Test-Path (Join-Path $install $asset))) { throw "Missing offline help asset: $asset" }
+        }
         if ($LASTEXITCODE -ne 0 -or $result.Trim() -ne $expected) { throw "Installed app did not produce $expected" }
     }
     Write-Host 'Native Windows install and update with spaces and ampersand: PASS'

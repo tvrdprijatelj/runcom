@@ -43,7 +43,19 @@ const server = http.createServer((request,response)=>{
         await page.locator('#version').selectOption('release');
         assert.ok(!(await page.locator('#command').textContent()).includes('--ref main'));
         await page.screenshot({path:path.join(root,`.test-artifacts/${lang}-${width}.png`),fullPage:true});
+        await page.getByRole('link',{name:lang==='sv'?'Hjälp':'Hjälp (svenska)',exact:true}).click();
+        assert.ok(page.url().endsWith('/help.html'));
+        assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+        assert.equal(await page.locator('.guide-section').count(),10);
+        assert.equal(await page.locator('#faq details').count(),17);
+        const question = page.locator('#faq details').first();
+        await question.locator('summary').click();
+        assert.equal(await question.evaluate(node=>node.open),true);
+        await page.screenshot({path:path.join(root,`.test-artifacts/help-${width}.png`),fullPage:true});
       }
+      await page.goto('file://' + path.join(root,'help.html'));
+      assert.equal(await page.locator('#faq details').count(),17);
+      assert.equal(await page.locator('body').evaluate(node=>getComputedStyle(node).backgroundColor),'rgb(12, 18, 28)');
       assert.deepEqual(errors,[]);
       await context.close();
     }

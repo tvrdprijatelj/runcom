@@ -44,6 +44,14 @@ class GuiTests(unittest.TestCase):
             time.sleep(0.01)
         self.fail('Timed out waiting for GUI state')
 
+    def test_help_button_and_shortcut(self):
+        self.assertEqual(self.app.btn_help['text'], 'Hjälp')
+        self.assertTrue(self.app.bind('<F1>'))
+        with patch.object(runcom.webbrowser, 'open', return_value=True) as browser:
+            self.app.btn_help.invoke()
+        browser.assert_called_once()
+        self.assertTrue(browser.call_args[0][0].endswith('help.html'))
+
     def test_create_save_search_and_open(self):
         with patch.object(runcom.simpledialog, 'askstring', return_value='hello.py'):
             self.app.new_file()

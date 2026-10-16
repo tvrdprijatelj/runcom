@@ -85,6 +85,10 @@ def replace_file(path, data, mode):
         if os.path.exists(temporary):
             os.unlink(temporary)
 replace_file(folder / 'runcom.py', (pathlib.Path(sys.argv[2]) / 'runcom.py').read_bytes(), 0o600)
+for name in ('help.html', 'help.css', 'style.css'):
+    asset = pathlib.Path(sys.argv[2]) / name
+    if asset.is_file():
+        replace_file(folder / name, asset.read_bytes(), 0o600)
 launcher = folder / 'runcom'
 launcher_text = ('#!/bin/sh\nexec ' + shlex.quote(str(folder / 'venv/bin/python')) + ' ' + shlex.quote(str(folder / 'runcom.py')) + ' "$@"\n')
 replace_file(launcher, launcher_text.encode(), 0o700)
