@@ -64,6 +64,31 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
 
       <h4>Säkerhet</h4>
       <p class="note">Kör inte remote-skript utan att först granska dem. Installern frågar innan systemnivå-paket installeras.</p>
+
+      <h4>Nedladdningsinstruktion</h4>
+      <ol class="note">
+        <li><strong>Inspektera innan du kör:</strong> ladda ned och läs skriptet först.</li>
+        <li><strong>Linux / macOS:</strong>
+          <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+        </li>
+        <li><strong>Windows (PowerShell):</strong>
+          <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
+notepad .\install.ps1
+powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
+        </li>
+        <li><strong>Direkt-pipe (inte rekommenderat):</strong>
+          <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh | bash</pre>
+          (Använd bara om du förstår riskerna och har granskat skriptet.)
+        </li>
+        <li><strong>Om webbläsaren visar ren text:</strong> högerklicka → Spara som, eller använd curl/Invoke-WebRequest-kommandona ovan. Nedladdningsknapparna på sidan försöker spara filen automatiskt; om webbläsaren blockerar det öppnas den i ny flik så att du kan spara den manuellt.</li>
+        <li><strong>Verifiera (valfritt):</strong> jämför SHA256 med en officiell CHECKSUMS-fil om sådan finns:
+          <pre>sha256sum install.sh   # Linux
+shasum -a 256 install.sh # macOS
+Get-FileHash .\install.ps1 -Algorithm SHA256 # PowerShell</pre>
+        </li>
+      </ol>
     </div>
 
     <div class="small" style="margin-top:12px;"><a href="download.html" style="color:var(--accent);text-decoration:none;">← Tillbaka till språkval</a></div>
