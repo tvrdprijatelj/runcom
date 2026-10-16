@@ -32,7 +32,7 @@ class ApplicationTests(unittest.TestCase):
             guide.write_text('<h1>Help</h1>')
             with patch.object(runcom, '__file__', str(source)), patch.object(runcom.webbrowser, 'open', return_value=True) as browser:
                 app.open_help()
-            browser.assert_called_once_with(guide.as_uri(), new=2)
+            browser.assert_called_once_with(guide.resolve().as_uri(), new=2)
 
     def test_help_falls_back_to_online_for_standalone_app(self):
         app = self.app()
