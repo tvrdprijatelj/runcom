@@ -24,9 +24,11 @@ Tkinter prerequisites:
 - Create a script with Ctrl+N, open with Ctrl+O, save with Ctrl+S, save as with Ctrl+Shift+S. macOS also supports Command.
 - Filter file names in the sidebar. Double-click a file or press Enter to open it.
 - F5 runs in the output panel. F6 runs in an external terminal; use this for interactive input.
-- Linux/macOS support shell scripts and Python files. Windows supports `.bat`, `.cmd` and `.ps1`.
-- Stop terminates the running process group. Unsaved changes are checked before switching files or closing.
-- The optional Unix sudo mode keeps a password in memory and passes it to child processes through their environment. Only enable it for scripts you trust; turn it off when finished. Terminal execution uses the terminal's normal authentication.
+- Linux/macOS support shell scripts and Python files; existing shebangs are respected. Windows supports `.bat`, `.cmd`, `.ps1` and `.py`.
+- Stop terminates the running process group. Unsaved changes are checked before switching files or closing. Output is streamed even without a newline, and buffered output is bounded.
+- On Linux/macOS, **Kör med sudo…** opens a terminal and uses normal sudo authentication. Runcom does not collect or cache the password.
+- Saves use an encoded temporary file followed by replacement, so encoding or write errors leave the original intact. External edits or deletions require confirmation before overwrite. Existing file permissions are preserved; only owner execution permission is added for a shebang.
+- Batch paths containing `%` are rejected with an explanation because cmd expands environment variables in those paths.
 
 ## Install a published release
 
@@ -42,7 +44,19 @@ Windows PowerShell:
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-The installers fetch the **latest published GitHub release**, not the current main branch. Changes on main become available to installed users after a new release is published.
+Without arguments, the installers fetch the **latest published GitHub release**. To install the current fixes on main, use:
+
+```sh
+bash install.sh --ref main
+```
+
+Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install.ps1 -Ref main
+```
+
+The download page defaults to current fixes on main and lets you select the latest published release instead. The generated commands download a fresh installer to a fixed filename before running it, avoiding accidentally running an older `install.sh` left in Downloads. A published release can be older than main; the page labels this explicitly.
 
 Linux/macOS installs to `${XDG_DATA_HOME:-~/.local/share}/runcom`. The installer prints the full launch command. Set `RUNCOM_INSTALL_DIR` to choose another location. Windows installs to `%LOCALAPPDATA%\Runcom` and adds a desktop shortcut; use `-InstallDir` to customize the location. Run the installer again to update; scripts in `~/skript` are kept separately.
 
@@ -53,6 +67,11 @@ python3 -m unittest discover -s tests -v
 python3 -m py_compile runcom.py
 bash -n install.sh download_assistant.sh
 node --check download.js
+node tests/test_download.cjs
 ```
 
-The automated checks cover execution commands, shell path quoting, failed Save As, Python file preservation, and persistent installation/update using an offline release fixture. Desktop appearance and native Windows/macOS behavior need testing on those systems.
+CI runs Python tests on Linux (3.8 and 3.12), Windows and macOS. Linux uses Xvfb for real Tk widget tests. Checks include file preservation on encoding/write failures, external changes, streaming output, bounded queues, actual script execution and stopping, and offline install/update fixtures. Native Windows checks exercise cmd paths containing spaces and `&`, PowerShell parsing, and the Windows installer.
+
+Browser tests use Playwright/Chromium to check Swedish and English pages at desktop and mobile sizes, downloads, version selection and clipboard behavior. CI saves page screenshots as artifacts. These are automated functional checks, not exhaustive testing of every desktop configuration.
+
+For local GUI tests on Linux, use `xvfb-run -a python3 -m unittest discover -s tests -v` or run in a desktop session. Without a display, GUI tests skip; CI sets `RUNCOM_REQUIRE_GUI=1` so display failures cannot pass silently.

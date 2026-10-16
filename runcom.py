@@ -2,12 +2,13 @@
 """Runcom – skapa, öppna, redigera och kör skriptfiler.
 
 Fungerar på Linux, macOS och Windows.
-  Linux/macOS: skript med shebang (bash). Sudo-lösenord kan hållas i minnet under sessionen.
+  Linux/macOS: skal- och Python-skript. Sudo körs i en separat terminal.
   Windows:     .bat/.cmd och .ps1. "Kör som admin" visar Windows egen UAC-ruta.
 
 Start:  python3 runcom.py   (Windows: py runcom.py)
 Kräver: Python 3.8+ med Tkinter (Debian/Ubuntu: sudo apt install python3-tk)
 """
+import codecs
 import ctypes
 import os
 import queue
@@ -78,9 +79,90 @@ def file_encoding(path):
 
 
 def template_for(name):
+    ext = Path(name).suffix.lower()
+    if ext == ".py":
+        return '#!/usr/bin/env python3\n\nprint("Hej från Runcom!")\n'
+    if ext == ".ps1":
+        return TPL_PS1
+    if ext in (".bat", ".cmd"):
+        return TPL_BAT
+    return TPL_BAT if IS_WIN else TPL_UNIX
+
+
+def atomic_write(path, text, encoding, executable=False, exclusive=False):
+    """Encode before touching disk; replace the destination only after a full write."""
+    data = text.encode(encoding)
+    path = Path(path)
+    # Follow an existing symlink without replacing the link itself.
+    target = path.resolve() if path.is_symlink() else path
+    mode = stat.S_IMODE(target.stat().st_mode) if target.exists() else 0o600
+    if executable and not IS_WIN:
+        mode |= stat.S_IXUSR
+    fd, temp_name = tempfile.mkstemp(prefix=".runcom-", dir=str(target.parent))
+    temp = Path(temp_name)
+    try:
+        with os.fdopen(fd, "wb") as output:
+            output.write(data)
+            output.flush()
+            os.fsync(output.fileno())
+        temp.chmod(mode)
+        if exclusive:
+            # Hard-link creation fails atomically if another file already exists.
+            os.link(str(temp), str(target))
+        else:
+            os.replace(str(temp), str(target))
+    finally:
+        try:
+            temp.unlink()
+        except FileNotFoundError:
+            pass
+    return data
+
+
+def python_executable():
+    executable = Path(sys.executable)
+    if IS_WIN and executable.name.lower() == "pythonw.exe":
+        return str(executable.with_name("python.exe"))
+    return str(executable)
+
+
+def script_command(path, keep_open=False):
+    path = Path(path).absolute()
+    ext = path.suffix.lower()
+    if ext == ".py":
+        return [python_executable(), "-u", str(path)]
     if IS_WIN:
-        return TPL_PS1 if name.lower().endswith(".ps1") else TPL_BAT
-    return TPL_UNIX
+        if ext in (".bat", ".cmd"):
+            if any(char in str(path) for char in ('%', '\r', '\n', '"')):
+                raise ValueError("Byt namn på batchfilen eller mappen: %, radbrytningar och citattecken stöds inte.")
+            exe = os.environ.get("COMSPEC", "cmd.exe")
+            # cmd /s requires an extra quote pair; list2cmdline on the whole
+            # command would escape quotes using rules cmd does not understand.
+            flag = "/k" if keep_open else "/c"
+            return subprocess.list2cmdline([exe]) + ' /d /v:off /s ' + flag + ' ""' + str(path) + '""'
+        if ext == ".ps1":
+            ps = shutil.which("pwsh") or shutil.which("powershell")
+            if not ps:
+                raise ValueError("PowerShell hittades inte.")
+            args = [ps, "-NoProfile"]
+            if keep_open:
+                args.append("-NoExit")
+            return args + ["-ExecutionPolicy", "Bypass", "-File", str(path)]
+        return None
+    # Respect a script's interpreter even when it has a .sh extension.
+    try:
+        with path.open(encoding="utf-8-sig") as source:
+            first = source.readline(4096).strip()
+    except UnicodeError:
+        return None
+    if first.startswith("#!"):
+        interpreter = shlex.split(first[2:])
+        if not interpreter:
+            raise ValueError("Skriptets shebang saknar ett program.")
+        return interpreter + [str(path)]
+    if ext in (".sh", ".bash"):
+        return ["bash", str(path)]
+    return None
 
 
 class App(tk.Tk):
@@ -96,15 +178,18 @@ class App(tk.Tk):
         self.mono_small.configure(size=10)
 
         self.folder = DEFAULT_DIR
-        self.folder.mkdir(parents=True, exist_ok=True)
+        try:
+            self.folder.mkdir(parents=True, exist_ok=True)
+        except OSError as error:
+            messagebox.showerror("Kunde inte skapa skriptmappen", str(error), parent=self)
+            self.folder = Path.home()
         self.current = None  # Path eller None
         self.proc = None
-        self.q = queue.Queue()
+        self.q = queue.Queue(maxsize=256)
+        self._closing = False
+        self._stop_after = None
+        self._snapshot = None
         self.files = []
-        self.sudo_pw = None   # lösenordet finns bara i minnet, aldrig på disk
-        self.sudo_dir = None
-        self.btn_sudo = None
-        self._btn_bg = None
 
         self._build_ui()
         self._bind_keys()
@@ -113,7 +198,7 @@ class App(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         if IS_MAC:
             self.createcommand("tk::mac::Quit", self.on_close)
-        self.after(50, self._drain_queue)
+        self._queue_after = self.after(50, self._drain_queue)
 
     # ------------------------------------------------------------------ UI
     def _build_ui(self):
@@ -161,9 +246,7 @@ class App(tk.Tk):
         if IS_WIN:
             tk.Button(bar, text="Kör som admin", command=self.run_as_admin).pack(side="left", padx=2)
         else:
-            self.btn_sudo = tk.Button(bar, text="Sudo: av", command=self.toggle_sudo)
-            self.btn_sudo.pack(side="left", padx=2)
-            self._btn_bg = self.btn_sudo.cget("bg")
+            tk.Button(bar, text="Kör med sudo…", command=self.run_with_sudo).pack(side="left", padx=2)
 
         main = tk.PanedWindow(self, orient="horizontal", sashwidth=5)
         main.pack(fill="both", expand=True)
@@ -280,7 +363,7 @@ class App(tk.Tk):
         if IS_WIN:
             return
         mode = path.stat().st_mode
-        path.chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        path.chmod(mode | stat.S_IXUSR)
 
     def refresh_list(self):
         self.folder_label.config(text=str(self.folder))
@@ -310,7 +393,7 @@ class App(tk.Tk):
     def new_file(self):
         if not self._confirm_discard():
             return
-        hint = "backup.bat eller backup.ps1" if IS_WIN else "backup.sh"
+        hint = "backup.bat, backup.ps1 eller hello.py" if IS_WIN else "backup.sh eller hello.py"
         name = simpledialog.askstring("Ny skriptfil", f"Filnamn (t.ex. {hint}):", parent=self)
         if not name:
             return
@@ -325,13 +408,15 @@ class App(tk.Tk):
             return
         text = template_for(name)
         try:
-            path.write_text(text, encoding=file_encoding(path))
-            self._make_executable(path)
+            snapshot = atomic_write(path, text, file_encoding(path),
+                                    executable=text.startswith("#!"), exclusive=True)
         except (OSError, UnicodeEncodeError) as e:
             messagebox.showerror("Fel", str(e))
             return
         self.current = path
+        self._snapshot = snapshot
         self._set_text(text)
+        self.search.set("")
         self.refresh_list()
         self._set_status(f"Skapade {path}")
         self.editor.focus_set()
@@ -342,18 +427,22 @@ class App(tk.Tk):
             self.load_path(Path(path))
 
     def load_path(self, path):
+        path = Path(path).absolute()
         if path == self.current and not self._dirty():
             return
         if not self._confirm_discard():
             return
         try:
-            text = path.read_text(encoding=file_encoding(path))
+            snapshot = path.read_bytes()
+            text = snapshot.decode(file_encoding(path))
+            text = text.replace("\r\n", "\n").replace("\r", "\n")
         except (OSError, UnicodeDecodeError) as e:
             messagebox.showerror("Kunde inte öppna", str(e))
             return
         if path.parent != self.folder:
             self.folder = path.parent
         self.current = path
+        self._snapshot = snapshot
         self._set_text(text)
         self.refresh_list()
         self._set_status(f"Öppnade {path}")
@@ -361,16 +450,19 @@ class App(tk.Tk):
     def save(self):
         if self.current is None:
             return self.save_as()
-        # Linux/macOS: se till att filen har en shebang så att den går att köra direkt
-        if not IS_WIN and self.current.suffix.lower() in (".sh", ".bash", "") and not self.editor.get("1.0", "end-1c").startswith("#!"):
-            self.editor.insert("1.0", SHEBANG)
         text = self.editor.get("1.0", "end-1c")
         if not text.endswith("\n"):
             text += "\n"
         try:
-            self.current.write_text(text, encoding=file_encoding(self.current))
-            if not IS_WIN and text.startswith("#!"):
-                self._make_executable(self.current)
+            snapshot = getattr(self, "_snapshot", None)
+            if snapshot is not None:
+                actual = self.current.read_bytes() if self.current.exists() else None
+                if actual != snapshot and not messagebox.askyesno(
+                        "Filen har ändrats", "Filen har ändrats eller tagits bort utanför Runcom.\n"
+                        "Vill du skriva över den med innehållet i editorn?", parent=self):
+                    return False
+            snapshot = atomic_write(self.current, text, file_encoding(self.current),
+                                    executable=text.startswith("#!"))
         except UnicodeEncodeError:
             messagebox.showerror("Kunde inte spara",
                                  "Filen innehåller tecken som inte finns i batchfilernas teckentabell "
@@ -379,6 +471,7 @@ class App(tk.Tk):
         except OSError as e:
             messagebox.showerror("Kunde inte spara", str(e))
             return False
+        self._snapshot = snapshot
         self.editor.edit_modified(False)
         self._update_title()
         self._set_status(f"Sparade {self.current}")
@@ -390,11 +483,14 @@ class App(tk.Tk):
         if not path:
             return False
         previous, folder = self.current, self.folder
+        snapshot = getattr(self, "_snapshot", None)
         self.current = Path(path).resolve()
         self.folder = self.current.parent
+        self._snapshot = snapshot if self.current == previous else None
         ok = self.save()
         if not ok:
             self.current, self.folder = previous, folder
+            self._snapshot = snapshot
             self._update_title()
         self.refresh_list()
         return ok
@@ -410,6 +506,7 @@ class App(tk.Tk):
             messagebox.showerror("Fel", str(e))
             return
         self.current = None
+        self._snapshot = None
         self._set_text("")
         self.refresh_list()
         self._set_status("Filen togs bort")
@@ -421,13 +518,19 @@ class App(tk.Tk):
         if d:
             self.folder = Path(d)
             self.current = None
+            self._snapshot = None
+            self.search.set("")
             self._set_text("")
             self.refresh_list()
 
     # ------------------------------------------------------------ körning
     def _out(self, text, tag=None):
         self.output.config(state="normal")
-        self.output.insert("end", text, tag)
+        self.output.insert("end", text, tag or ())
+        # Keep both queue and visible output bounded during noisy scripts.
+        size = int(self.output.count("1.0", "end-1c", "chars")[0])
+        if size > 1_000_000:
+            self.output.delete("1.0", f"1.0+{size - 800_000}c")
         self.output.see("end")
         self.output.config(state="disabled")
 
@@ -439,21 +542,7 @@ class App(tk.Tk):
         return True
 
     def _command_for(self, path, keep_open=False):
-        """Kommandoraden som kör skriptet, eller None om filtypen inte stöds (Windows)."""
-        if not IS_WIN:
-            if path.suffix.lower() == ".py":
-                return [sys.executable, "-u", str(path)]
-            if path.suffix.lower() in (".sh", ".bash"):
-                return ["bash", str(path)]
-            return [str(path)]
-        ext = path.suffix.lower()
-        if ext in (".bat", ".cmd"):
-            return ["cmd.exe", "/d", "/k" if keep_open else "/c", str(path)]
-        if ext == ".ps1":
-            ps = shutil.which("pwsh") or shutil.which("powershell") or "powershell"
-            flag = "-NoExit" if keep_open else "-NoProfile"
-            return [ps, flag, "-ExecutionPolicy", "Bypass", "-File", str(path)]
-        return None
+        return script_command(path, keep_open)
 
     def run_in_app(self):
         if self.proc is not None:
@@ -461,17 +550,21 @@ class App(tk.Tk):
         if not self._prepare_run():
             return
         path = self.current
-        cmd = self._command_for(path)
+        try:
+            cmd = self._command_for(path)
+        except (OSError, ValueError) as error:
+            messagebox.showerror("Kunde inte köra skriptet", str(error), parent=self)
+            return
         self.output.config(state="normal")
         self.output.delete("1.0", "end")
         self.output.config(state="disabled")
         if cmd is None:
-            self._out("Filtypen stöds inte. Använd .bat, .cmd eller .ps1.\n", "err")
+            self._out("Filtypen stöds inte. Använd ett skal- eller Python-skript (Windows: .bat, .cmd, .ps1 eller .py).\n", "err")
             return
         self._out(f"> {path}\n", "info")
         kwargs = dict(
             cwd=str(path.parent), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            stdin=subprocess.DEVNULL, bufsize=1, encoding=OEM, errors="replace",
+            stdin=subprocess.DEVNULL, bufsize=0,
             env=self._run_env(),
         )
         if IS_WIN:
@@ -487,22 +580,50 @@ class App(tk.Tk):
         self.btn_run.config(state="disabled")
         self.btn_stop.config(state="normal")
         self._set_status("Kör…")
-        threading.Thread(target=self._reader, args=(self.proc,), daemon=True).start()
+        encoding = OEM
+        if path.suffix.lower() == ".py" or (
+                path.suffix.lower() == ".ps1" and isinstance(cmd, list)
+                and Path(cmd[0]).stem.lower() == "pwsh"):
+            encoding = "utf-8"
+        threading.Thread(target=self._reader, args=(self.proc, encoding), daemon=True).start()
 
-    def _reader(self, proc):
+    def _enqueue(self, kind, proc, value):
+        while not self._closing:
+            try:
+                self.q.put((kind, proc, value), timeout=0.1)
+                return
+            except queue.Full:
+                continue
+
+    def _reader(self, proc, encoding=OEM):
+        decoder = codecs.getincrementaldecoder(encoding)(errors="replace")
         try:
-            for line in proc.stdout:
-                self.q.put(("line", line))
+            while not self._closing:
+                data = os.read(proc.stdout.fileno(), 4096)
+                if not data:
+                    break
+                text = decoder.decode(data)
+                if text:
+                    self._enqueue("line", proc, text)
+            tail = decoder.decode(b"", final=True)
+            if tail:
+                self._enqueue("line", proc, tail)
+        except OSError as error:
+            self._enqueue("error", proc, str(error))
         finally:
             proc.stdout.close()
             proc.wait()
-            self.q.put(("done", proc.returncode))
+            self._enqueue("done", proc, proc.returncode)
 
     def _drain_queue(self):
         try:
             for _ in range(200):
-                kind, val = self.q.get_nowait()
-                if kind == "line":
+                kind, proc, val = self.q.get_nowait()
+                if proc is not self.proc:
+                    continue
+                if kind == "error":
+                    self._out(f"Kunde inte läsa utdata: {val}\n", "err")
+                elif kind == "line":
                     self._out(val)
                 else:
                     self._out(f"\n[Avslutades med kod {val}]\n", "info" if val == 0 else "err")
@@ -512,7 +633,7 @@ class App(tk.Tk):
                     self._set_status(f"Klar (kod {val})")
         except queue.Empty:
             pass
-        self.after(50, self._drain_queue)
+        self._queue_after = self.after(50, self._drain_queue)
 
     def stop(self):
         if self.proc is None:
@@ -524,13 +645,13 @@ class App(tk.Tk):
                                capture_output=True, creationflags=NO_WINDOW)
             else:
                 os.killpg(pid, signal.SIGTERM)
-                self.after(1500, lambda proc=self.proc: self._force_stop(proc))
+                self._stop_after = self.after(1500, lambda proc=self.proc: self._force_stop(proc))
             self._out("\n[Stoppad av användaren]\n", "err")
         except (ProcessLookupError, PermissionError, OSError):
             pass
 
     def _force_stop(self, proc):
-        if proc is not None and proc.poll() is None:
+        if proc is not None and proc is self.proc:
             try:
                 os.killpg(proc.pid, signal.SIGKILL)
             except OSError:
@@ -542,11 +663,19 @@ class App(tk.Tk):
         self.output.config(state="disabled")
 
     # ------------------------------------------------- terminal / admin
-    def _unix_inner(self, path):
-        return (shlex.join(self._command_for(path)) + "; echo; "
+    def _unix_inner(self, path, elevated=False):
+        command = self._command_for(path)
+        if command is None:
+            raise ValueError("Filtypen stöds inte. Välj ett skal- eller Python-skript.")
+        if elevated:
+            sudo = shutil.which("sudo")
+            if not sudo:
+                raise ValueError("Kommandot sudo hittades inte.")
+            command = [sudo, "--", *command]
+        return (shlex.join(command) + "; echo; "
                 "printf '[Klart - tryck Enter för att stänga] '; read -r _x")
 
-    def run_in_terminal(self):
+    def run_in_terminal(self, elevated=False):
         if not self._prepare_run():
             return
         path = self.current
@@ -554,12 +683,12 @@ class App(tk.Tk):
             if IS_WIN:
                 cmd = self._command_for(path, keep_open=True)
                 if cmd is None:
-                    messagebox.showerror("Filtypen stöds inte", "Använd .bat, .cmd eller .ps1.")
+                    messagebox.showerror("Filtypen stöds inte", "Använd .bat, .cmd, .ps1 eller .py.")
                     return
                 subprocess.Popen(cmd, cwd=str(path.parent), creationflags=NEW_CONSOLE)
                 self._set_status(f"Startade {path.name} i ett konsolfönster")
             elif IS_MAC:
-                line = f"cd {shlex.quote(str(path.parent))} && {self._unix_inner(path)}"
+                line = f"cd {shlex.quote(str(path.parent))} && {self._unix_inner(path, elevated)}"
                 esc = line.replace("\\", "\\\\").replace('"', '\\"')
                 script = f'tell application "Terminal"\nactivate\ndo script "{esc}"\nend tell'
                 subprocess.Popen(["osascript", "-e", script])
@@ -567,14 +696,14 @@ class App(tk.Tk):
             else:
                 for prog, prefix in TERMINALS:
                     if shutil.which(prog):
-                        subprocess.Popen([prog, *prefix, "bash", "-c", self._unix_inner(path)],
+                        subprocess.Popen([prog, *prefix, "bash", "-c", self._unix_inner(path, elevated)],
                                          cwd=str(path.parent), start_new_session=True)
                         self._set_status(f"Startade {path.name} i {prog}")
                         return
                 messagebox.showerror("Ingen terminal hittades",
                                      "Installera t.ex. gnome-terminal, konsole eller xterm, "
                                      "eller använd ”Kör här”.")
-        except OSError as e:
+        except (OSError, ValueError) as e:
             messagebox.showerror("Fel", str(e))
 
     def run_as_admin(self):
@@ -584,12 +713,21 @@ class App(tk.Tk):
         path = self.current
         ext = path.suffix.lower()
         if ext in (".bat", ".cmd"):
-            exe, params = "cmd.exe", f'/k ""{path}""'
+            try:
+                command = self._command_for(path, keep_open=True)
+            except ValueError as error:
+                messagebox.showerror("Kunde inte köra skriptet", str(error), parent=self)
+                return
+            exe = os.environ.get("COMSPEC", "cmd.exe")
+            params = command[len(subprocess.list2cmdline([exe])):].lstrip()
+        elif ext == ".py":
+            exe = python_executable()
+            params = subprocess.list2cmdline([str(path)])
         elif ext == ".ps1":
             exe = shutil.which("pwsh") or shutil.which("powershell") or "powershell.exe"
             params = f'-NoExit -ExecutionPolicy Bypass -File "{path}"'
         else:
-            messagebox.showerror("Filtypen stöds inte", "Använd .bat, .cmd eller .ps1.")
+            messagebox.showerror("Filtypen stöds inte", "Använd .bat, .cmd, .ps1 eller .py.")
             return
         r = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, params, str(path.parent), 1)
         if r <= 32:
@@ -597,79 +735,19 @@ class App(tk.Tk):
         else:
             self._set_status(f"Startade {path.name} som administratör")
 
-    # --------------------------------------------------- sudo (Linux/macOS)
-    def toggle_sudo(self):
-        if self.sudo_pw is not None:
-            self._forget_sudo()
-            self._set_status("Sudo-lösenordet glömdes")
-        else:
-            self._enable_sudo()
-
-    def _enable_sudo(self):
-        real_sudo = shutil.which("sudo")
-        if not real_sudo:
-            messagebox.showerror("Sudo saknas", "Kommandot sudo hittades inte.")
-            return
-        pw = simpledialog.askstring("Sudo", "Lösenord för sudo (sparas bara i minnet\n"
-                                    "tills du stänger appen eller trycker på knappen igen):",
-                                    show="*", parent=self)
-        if not pw:
-            return
-        env = dict(os.environ, LC_ALL="C", LANG="C")  # engelska meddelanden som går att tolka
-        try:
-            r = subprocess.run([real_sudo, "-S", "-k", "-p", "", "true"],
-                               input=(pw + "\n").encode("utf-8"),
-                               capture_output=True, timeout=20, env=env)
-        except (OSError, subprocess.TimeoutExpired) as e:
-            messagebox.showerror("Fel", str(e))
-            return
-        if r.returncode != 0:
-            err = r.stderr.decode("utf-8", "replace").strip()
-            low = err.lower()
-            if "not in the sudoers" in low or "may not run sudo" in low:
-                msg = "Ditt konto har inte sudo-rättigheter."
-            elif "incorrect password" in low or "try again" in low:
-                msg = ("Sudo godkände inte lösenordet. Använd ditt eget användarlösenord "
-                       "(inte root-lösenordet) och kontrollera Caps Lock.")
-            else:
-                msg = "Sudo svarade:"
-            messagebox.showerror("Sudo nekade", f"{msg}\n\n{err}")
-            return
-        # Hjälpskript i en privat tempmapp (0700). Lösenordet ligger INTE i filerna,
-        # bara i miljövariabeln som skickas till de skript som körs härifrån.
-        self.sudo_dir = tempfile.mkdtemp(prefix="runcom-")
-        askpass = os.path.join(self.sudo_dir, "askpass")
-        shim = os.path.join(self.sudo_dir, "sudo")
-        with open(askpass, "w") as f:
-            f.write('#!/bin/sh\nprintf \'%s\\n\' "$SKRIPTSTUDIO_SUDO_PW"\n')
-        with open(shim, "w") as f:
-            f.write(f'#!/bin/sh\nexec {shlex.quote(real_sudo)} -A "$@"\n')
-        os.chmod(askpass, 0o700)
-        os.chmod(shim, 0o700)
-        self.sudo_pw = pw
-        self.btn_sudo.config(text="Sudo: på", bg="#f9a825")
-        self._set_status("Sudo aktivt för skript som körs med ”Kör här” (F5)")
-
-    def _forget_sudo(self):
-        self.sudo_pw = None
-        if self.sudo_dir:
-            shutil.rmtree(self.sudo_dir, ignore_errors=True)
-            self.sudo_dir = None
-        if self.btn_sudo is not None:
-            self.btn_sudo.config(text="Sudo: av", bg=self._btn_bg)
+    def run_with_sudo(self):
+        self.run_in_terminal(elevated=True)
 
     def _run_env(self):
         env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+        # Do not forward legacy cached credentials inherited from an old Runcom.
+        env.pop("SKRIPTSTUDIO_SUDO_PW", None)
         if IS_MAC:
-            # Appar som startas från Finder får en minimal PATH – lägg till Homebrew
             have = env.get("PATH", "").split(os.pathsep)
             extra = [p for p in ("/opt/homebrew/bin", "/opt/homebrew/sbin", "/usr/local/bin")
                      if os.path.isdir(p) and p not in have]
             env["PATH"] = os.pathsep.join(extra + [env.get("PATH", "")])
-        if self.sudo_pw is not None and self.sudo_dir:
-            env["SUDO_ASKPASS"] = os.path.join(self.sudo_dir, "askpass")
-            env["SKRIPTSTUDIO_SUDO_PW"] = self.sudo_pw
-            env["PATH"] = self.sudo_dir + os.pathsep + env.get("PATH", "")
         return env
 
     def on_close(self):
@@ -679,7 +757,10 @@ class App(tk.Tk):
             self.stop()
             if not IS_WIN:
                 self._force_stop(self.proc)
-        self._forget_sudo()
+        self._closing = True
+        self.after_cancel(self._queue_after)
+        if self._stop_after is not None:
+            self.after_cancel(self._stop_after)
         self.destroy()
 
 
@@ -689,4 +770,8 @@ if __name__ == "__main__":
             ctypes.windll.shcore.SetProcessDpiAwareness(1)
         except Exception:
             pass
-    App().mainloop()
+    try:
+        App().mainloop()
+    except tk.TclError as error:
+        print(f"Runcom kunde inte starta det grafiska gränssnittet: {error}", file=sys.stderr)
+        sys.exit(1)
