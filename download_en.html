@@ -22,6 +22,7 @@
     .note{color:var(--muted)}
     .small{font-size:0.95rem;color:var(--muted)}
     .status{margin-top:10px;color:var(--muted)}
+    a.raw-link{color:var(--accent)}
     @media(max-width:720px){.actions{flex-direction:column}.btn{width:100%}}
   </style>
 </head>
@@ -95,28 +96,54 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
       const winUrl = rawBase + '/install.ps1';
       const statusEl = document.getElementById('status');
 
+      function isIOS() {
+        // iOS detection (covers iPhone/iPad/iPod and iPadOS Safari)
+        return /iP(hone|od|ad)/.test(navigator.platform) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
+      }
+
       async function downloadRaw(url, filename) {
+        statusEl.textContent = 'Preparing download...';
         try {
-          statusEl.textContent = 'Downloading...';
-          const res = await fetch(url, { mode: 'cors' });
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+          const res = await fetch(url, { mode: 'cors', signal: controller.signal });
+          clearTimeout(timeoutId);
+
           if (!res.ok) throw new Error('HTTP ' + res.status);
 
-          const blob = await res.blob();
-          const objectUrl = URL.createObjectURL(blob);
+          // If response is opaque (CORS), fall back
+          if (res.type === 'opaque') throw new Error('Opaque response (CORS)');
 
+          const blob = await res.blob();
+
+          // iOS Safari: download attribute often not supported for blob URLs — open in new tab
+          if (isIOS()) {
+            const objectUrl = URL.createObjectURL(blob);
+            window.open(objectUrl, '_blank', 'noopener');
+            statusEl.innerHTML = 'Opened file in new tab — use Share → Save to Files to store it.';
+            // revoke later
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+            return;
+          }
+
+          // Normal flow: create object URL and use anchor download
+          const objectUrl = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = objectUrl;
-          a.download = filename;
+          a.download = filename || '';
           document.body.appendChild(a);
           a.click();
           a.remove();
-
-          URL.revokeObjectURL(objectUrl);
           statusEl.textContent = 'Download started. Check your downloads folder.';
+
+          // revoke after short delay to ensure download started
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
         } catch (err) {
-          console.warn('download via fetch failed:', err);
-          statusEl.textContent = 'Browser blocked direct download. Opening raw file so you can Save As...';
-          window.open(url, '_blank', 'noopener');
+          console.warn('download failed', err);
+          // Provide helpful fallback and visible raw link
+          statusEl.innerHTML = 'Automatic download failed: ' + (err.message || err) + '. <a class="raw-link" href="' + url + '" target="_blank" rel="noopener">Open raw file</a>';
+          try { window.open(url, '_blank', 'noopener'); } catch(e) { /* ignore */ }
         }
       }
 
