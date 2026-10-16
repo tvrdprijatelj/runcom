@@ -26,13 +26,14 @@ const server = http.createServer((request,response)=>{
       page.on('pageerror',error=>errors.push(error.message));
       for(const lang of ['sv','en']){
         await page.goto(`${base}/download_${lang}.html`);
+        await page.screenshot({path:path.join(root,`.test-artifacts/${lang}-${width}.png`),fullPage:true});
         assert.equal(await page.locator('html').getAttribute('lang'),lang);
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         await page.locator('#os').selectOption('windows');
         await page.locator('#version').selectOption('main');
         assert.match(await page.locator('#command').textContent(),/-Ref main/);
         await page.locator('#copy').click();
-        assert.match(await page.locator('#status').textContent(),/kopierades|copied/);
+        await page.waitForFunction(()=>/kopierades|copied/.test(document.getElementById('status').textContent));
         const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#installer').click()]);
         assert.equal(download.suggestedFilename(),'runcom-install.ps1');
         assert.match(fs.readFileSync(await download.path(),'utf8'),/^param\(/);

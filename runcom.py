@@ -526,11 +526,14 @@ class App(tk.Tk):
     # ------------------------------------------------------------ körning
     def _out(self, text, tag=None):
         self.output.config(state="normal")
+        # Trim incoming data before inserting: huge single lines are costly in Tk.
+        limit = 100_000
+        text = text[-limit:]
+        count = self.output.count("1.0", "end-1c", "chars")
+        size = int(count[0]) if count else 0
+        if size + len(text) > limit:
+            self.output.delete("1.0", f"1.0+{size + len(text) - 80_000}c")
         self.output.insert("end", text, tag or ())
-        # Keep both queue and visible output bounded during noisy scripts.
-        size = int(self.output.count("1.0", "end-1c", "chars")[0])
-        if size > 1_000_000:
-            self.output.delete("1.0", f"1.0+{size - 800_000}c")
         self.output.see("end")
         self.output.config(state="disabled")
 
@@ -645,6 +648,8 @@ class App(tk.Tk):
                                capture_output=True, creationflags=NO_WINDOW)
             else:
                 os.killpg(pid, signal.SIGTERM)
+                if self._stop_after is not None:
+                    self.after_cancel(self._stop_after)
                 self._stop_after = self.after(1500, lambda proc=self.proc: self._force_stop(proc))
             self._out("\n[Stoppad av användaren]\n", "err")
         except (ProcessLookupError, PermissionError, OSError):

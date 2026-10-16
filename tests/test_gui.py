@@ -83,9 +83,22 @@ class GuiTests(unittest.TestCase):
         self.pump_until(lambda: self.app.proc is None)
         self.assertIn('Stoppad av användaren', self.app.output.get('1.0', 'end'))
 
+    @unittest.skipIf(os.name == 'nt', 'Unix process groups')
+    def test_stop_kills_child_that_ignores_term(self):
+        path = Path(self.folder.name) / 'children.py'
+        path.write_text('import subprocess,sys,time\n'
+                        'child = subprocess.Popen([sys.executable,"-u","-c",'
+                        '\'import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); print("child ready",flush=True); time.sleep(60)\'])\n'
+                        'time.sleep(60)\n')
+        self.app.load_path(path)
+        self.app.run_in_app()
+        self.pump_until(lambda: 'child ready' in self.app.output.get('1.0', 'end'))
+        self.app.stop()
+        self.pump_until(lambda: self.app.proc is None, timeout=5)
+
     def test_output_limit_and_clear(self):
         self.app._out('x' * 1_100_000)
-        self.assertLessEqual(len(self.app.output.get('1.0', 'end-1c')), 1_000_000)
+        self.assertLessEqual(len(self.app.output.get('1.0', 'end-1c')), 100_000)
         self.app.clear_output()
         self.assertEqual(self.app.output.get('1.0', 'end-1c'), '')
 

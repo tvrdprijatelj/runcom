@@ -1,5 +1,8 @@
 name: Checks
 on: [push, pull_request]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -18,7 +21,7 @@ jobs:
           - os: macos-latest
             python: '3.12'
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,7 +47,7 @@ jobs:
           ./tests/test_windows_installer.ps1
   website:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -59,4 +62,5 @@ jobs:
         if: always()
         with:
           name: website-screenshots
-          path: .test-artifacts/
+          path: .test-artifacts/*.png
+          include-hidden-files: true
