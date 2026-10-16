@@ -1,92 +1,108 @@
-<style>
-.runcom-guide{max-width:52rem;line-height:1.6}
-.runcom-guide h3{margin:2rem 0 .5rem}
-.runcom-guide p{margin:.4rem 0 1rem}
-.runcom-guide .os{display:grid;grid-template-columns:9.5rem minmax(0,1fr);gap:.5rem 1.25rem;padding:1rem 0;border-top:1px solid rgba(128,128,128,.3)}
-.runcom-guide .os-list .os:last-child{border-bottom:1px solid rgba(128,128,128,.3)}
-.runcom-guide .os header{display:flex;flex-direction:column;align-items:flex-start;gap:.5rem}
-.runcom-guide h4{margin:0;font-size:1rem}
-.runcom-guide pre{margin:0;padding:.85rem 1rem;background:#1f2a37;color:#e5e9ee;border-left:3px solid #3a9d94;border-radius:4px;overflow-x:auto;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-.runcom-guide pre code{font:inherit}
-.runcom-guide :not(pre)>code,.runcom-guide kbd{padding:.05em .35em;border:1px solid rgba(128,128,128,.4);border-radius:3px;font:.9em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-.runcom-guide ol{padding-left:1.25rem}
-.runcom-guide li{margin:.5rem 0 1rem}
-.runcom-guide li pre{margin-top:.5rem}
-.runcom-guide .copy{font:inherit;font-size:.85rem;padding:.2rem .7rem;color:inherit;background:transparent;border:1px solid rgba(128,128,128,.5);border-radius:4px;cursor:pointer}
-.runcom-guide .copy:hover{background:rgba(128,128,128,.15)}
-.runcom-guide .copy:focus-visible{outline:2px solid #3a9d94;outline-offset:2px}
-@media (max-width:600px){.runcom-guide .os{grid-template-columns:1fr}.runcom-guide .os header{flex-direction:row;align-items:center;justify-content:space-between}}
-</style>
-<div class="runcom-guide" data-copy="Kopiera" data-copied="Kopierat!">
-  <h3>Snabba steg (per operativsystem)</h3>
-  <p>Ladda först ned installationsskriptet, läs igenom det och kör det sedan. Välj ditt operativsystem nedan.</p>
-  <p>På macOS och Linux visar <code>less</code> skriptet så att du kan läsa det – avsluta med <kbd>q</kbd>.</p>
-  <div class="os-list">
-    <section class="os">
-      <header><h4>macOS</h4></header>
-      <pre><code>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
-less install.sh
-bash install.sh</code></pre>
-    </section>
-    <section class="os">
-      <header><h4>Ubuntu / Debian</h4></header>
-      <pre><code>sudo apt update &amp;&amp; sudo apt install -y curl
-curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
-less install.sh
-bash install.sh</code></pre>
-    </section>
-    <section class="os">
-      <header><h4>Fedora / RHEL</h4></header>
-      <pre><code>sudo dnf install -y curl
-curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
-less install.sh
-bash install.sh</code></pre>
-    </section>
-    <section class="os">
-      <header><h4>Arch Linux</h4></header>
-      <pre><code>sudo pacman -S --needed curl
-curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
-less install.sh
-bash install.sh</code></pre>
-    </section>
-    <section class="os">
-      <header><h4>Andra Linux-distributioner</h4></header>
-      <pre><code>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
-less install.sh
-bash install.sh</code></pre>
-    </section>
-    <section class="os">
-      <header><h4>Windows (PowerShell)</h4></header>
-      <pre><code>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
-notepad .\install.ps1
-powershell -ExecutionPolicy Bypass -File .\install.ps1</code></pre>
-    </section>
-  </div>
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>runcom — Nedladdare</title>
+  <style>
+    :root{--bg:#071026;--panel:#081423;--accent:#46d2ff;--accent2:#7ef2c9;--muted:#9fb}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,'Segoe UI',Roboto,Arial;background:linear-gradient(180deg,var(--bg),#071022);color:#eaf;display:flex;align-items:center;justify-content:center;padding:36px}
+    .card{width:min(920px,98%);background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.01));border-radius:14px;padding:24px;border:1px solid rgba(255,255,255,.04);box-shadow:0 12px 28px rgba(0,0,0,.18)}
+    .hdr{display:flex;gap:12px;align-items:center}
+    .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#06111f;font-weight:800}
+    h1{margin:0;font-size:clamp(1.8rem,3vw,2.5rem)}
+    p.lead{color:var(--muted);margin:6px 0 12px;line-height:1.6}
+    .download-actions{display:flex;flex-wrap:wrap;gap:12px;margin:18px 0 14px}
+    .download-btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:10px;text-decoration:none;font-weight:800;background:linear-gradient(135deg,#76a9ff,#90baff);color:#05111a;border:1px solid rgba(255,255,255,.08);box-shadow:0 6px 18px rgba(0,0,0,.18)}
+    .download-btn.secondary{background:rgba(255,255,255,.04);color:#eaf;border:1px solid rgba(255,255,255,.12)}
+    .panel{margin-top:18px;padding:14px;border-radius:10px;background:rgba(255,255,255,.02)}
+    .os-list{display:grid;gap:12px}
+    .os{display:grid;grid-template-columns:170px minmax(0,1fr);gap:12px 16px;padding:12px 0;border-top:1px solid rgba(255,255,255,.08)}
+    .os:last-child{border-bottom:1px solid rgba(255,255,255,.08)}
+    .os h4{margin:0;padding-top:4px;font-size:1rem}
+    pre{margin:0;padding:12px 14px;background:rgba(0,0,0,.45);border-radius:8px;overflow:auto;color:#edf6ff;border-left:3px solid #3a9d94;font:13px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    .note{color:var(--muted);line-height:1.6}
+    ol{margin:0;padding-left:20px;color:#eaf}
+    li{margin:0 0 12px}
+    .small{font-size:.95rem;color:var(--muted)}
+    @media(max-width:720px){body{padding:18px}.os{grid-template-columns:1fr}.download-actions{flex-direction:column}.download-btn{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="hdr">
+      <div class="logo">R</div>
+      <div>
+        <h1>runcom — Nedladdare</h1>
+        <p class="lead">Ladda ner installationsassistenten. Den hämtar den senaste releasen, skapar en Python-miljö och installerar beroenden om det behövs.</p>
+      </div>
+    </div>
 
-  <h3>Snabbtest i en virtuell maskin (VM)</h3>
-  <ol>
-    <li>Gå till projektmappen i en terminal och starta en lokal webbserver:<pre><code>python3 -m http.server 8000</code></pre></li>
-    <li>Öppna sidan i webbläsaren:<pre><code>http://localhost:8000/download_sv.html</code></pre></li>
-    <li>Klicka på nedladdningsknapparna och kontrollera att filerna hamnar i nedladdningsmappen (Downloads).</li>
-    <li>Stoppa webbservern med <kbd>Ctrl</kbd>+<kbd>C</kbd> när du är klar.</li>
-  </ol>
-</div>
-<script>
-document.querySelectorAll('.runcom-guide').forEach(function(g){
-  if(g.dataset.ready||!navigator.clipboard)return;
-  g.dataset.ready='1';
-  g.querySelectorAll('.os').forEach(function(s){
-    var code=s.querySelector('pre'),head=s.querySelector('header');
-    if(!code||!head)return;
-    var b=document.createElement('button');
-    b.type='button';b.className='copy';b.textContent=g.dataset.copy;
-    b.addEventListener('click',function(){
-      navigator.clipboard.writeText(code.textContent).then(function(){
-        b.textContent=g.dataset.copied;
-        setTimeout(function(){b.textContent=g.dataset.copy},1800);
-      });
-    });
-    head.appendChild(b);
-  });
-});
-</script>
+    <div class="download-actions">
+      <a class="download-btn" href="https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh" download>Ladda ner install.sh (Linux / macOS)</a>
+      <a class="download-btn secondary" href="https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1" download>Ladda ner install.ps1 (Windows)</a>
+    </div>
+
+    <div class="panel">
+      <h3>Snabba steg (per operativsystem)</h3>
+      <div class="os-list">
+        <section class="os">
+          <h4>macOS</h4>
+          <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+        </section>
+
+        <section class="os">
+          <h4>Ubuntu / Debian</h4>
+          <pre>sudo apt update &amp;&amp; sudo apt install -y curl
+curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+        </section>
+
+        <section class="os">
+          <h4>Fedora / RHEL</h4>
+          <pre>sudo dnf install -y curl
+curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+        </section>
+
+        <section class="os">
+          <h4>Arch Linux</h4>
+          <pre>sudo pacman -S --needed curl
+curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+        </section>
+
+        <section class="os">
+          <h4>Övriga Linux</h4>
+          <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+        </section>
+
+        <section class="os">
+          <h4>Windows (PowerShell)</h4>
+          <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
+notepad .\install.ps1
+powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
+        </section>
+      </div>
+
+      <h3>Snabbtest i en virtuell maskin</h3>
+      <ol class="note">
+        <li>Öppna en terminal i projektmappen och kör:<pre>python3 -m http.server 8000</pre></li>
+        <li>Öppna sidan i webbläsaren:<pre>http://localhost:8000/download_sv.html</pre></li>
+        <li>Klicka på nedladdningsknapparna och kontrollera att filerna hamnar i din nedladdningsmapp.</li>
+        <li>Stoppa servern med Ctrl + C när du är klar.</li>
+      </ol>
+    </div>
+
+    <div class="small" style="margin-top:12px;"><a href="download.html" style="color:var(--accent);text-decoration:none;">← Tillbaka till språkval</a></div>
+  </div>
+</body>
+</html>
