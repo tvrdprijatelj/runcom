@@ -1,140 +1,44 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>runcom — Installer</title>
-  <style>
-    :root{--bg:#071026;--panel:#081423;--accent:#46d2ff;--accent2:#7ef2c9;--muted:#9fb}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:linear-gradient(180deg,var(--bg),#071022);color:#eaf;display:flex;align-items:center;justify-content:center;padding:36px}
-    .card{width:min(920px,98%);background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:14px;padding:24px;border:1px solid rgba(255,255,255,0.04)}
-    .hdr{display:flex;gap:12px;align-items:center}
-    .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#06111f;font-weight:800}
-    h1{margin:0}
-    p.lead{color:var(--muted);margin:6px 0 12px}
-    .actions{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap}
-    .btn{padding:12px 14px;border-radius:10px;text-decoration:none;font-weight:800;display:inline-block;border:none;cursor:pointer}
-    .primary{background:linear-gradient(135deg,#76a9ff,#90baff);color:#05111a}
-    .secondary{background:rgba(255,255,255,0.03);color:#eaf;border:1px solid rgba(255,255,255,0.03)}
-    .panel{margin-top:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02)}
-    pre{background:rgba(0,0,0,0.45);padding:10px;border-radius:8px;overflow:auto}
-    .note{color:var(--muted)}
-    .small{font-size:0.95rem;color:var(--muted)}
-    .status{margin-top:10px;color:var(--muted)}
-    a.raw-link{color:var(--accent)}
-    @media(max-width:720px){.actions{flex-direction:column}.btn{width:100%}}
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="hdr">
-      <div class="logo">R</div>
-      <div>
-        <h1>runcom — Installer</h1>
-        <p class="lead">Download the installer assistant. This script fetches the latest release, creates a Python virtual environment, and installs dependencies if needed.</p>
-      </div>
-    </div>
+<h3>Quick steps (by operating system)</h3>
+<div class="note">
+  <h4>macOS</h4>
+  <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
 
-    <div class="actions">
-      <button id="dl-unix" class="btn primary">Download installer — Linux / macOS</button>
-      <button id="dl-win" class="btn secondary">Download installer — Windows</button>
-    </div>
+  <h4>Ubuntu / Debian</h4>
+  <pre>sudo apt update && sudo apt install -y curl
+curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
 
-    <div id="status" class="status">&nbsp;</div>
+  <h4>Fedora / RHEL</h4>
+  <pre>sudo dnf install -y curl
+curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
 
-    <div class="panel">
-      <h3>Quick steps</h3>
-      <div class="note">
-        <ol>
-          <li><strong>Download and open (Linux / macOS)</strong>
-            <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
-less install.sh</pre>
-          </li>
-          <li><strong>Run (Linux / macOS)</strong>
-            <pre>bash install.sh</pre>
-          </li>
-          <li><strong>Download and open (Windows PowerShell)</strong>
-            <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
-notepad .\install.ps1</pre>
-          </li>
-          <li><strong>Run (Windows)</strong>
-            <pre>powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
-          </li>
-        </ol>
-      </div>
+  <h4>Arch Linux</h4>
+  <pre>sudo pacman -Syu --noconfirm curl
+curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
 
-      <h4>Quick test in a VM</h4>
-      <div class="note">
-        <ol>
-          <li>In the project folder run: <pre>python3 -m http.server 8000</pre></li>
-          <li>Open a browser to: <pre>http://localhost:8000/download_en.html</pre></li>
-          <li>Click the download buttons and check your Downloads folder.</li>
-        </ol>
-      </div>
+  <h4>Other Linux</h4>
+  <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
 
-    </div>
+  <h4>Windows (PowerShell)</h4>
+  <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
+notepad .\install.ps1
+powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
+</div>
 
-    <div class="small" style="margin-top:12px;"><a href="download.html" style="color:var(--accent);text-decoration:none;">← Back to language selector</a></div>
-  </div>
-
-  <script>
-    (function(){
-      const rawBase = 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main';
-      const unixUrl = rawBase + '/install.sh';
-      const winUrl = rawBase + '/install.ps1';
-      const statusEl = document.getElementById('status');
-
-      function isIOS() {
-        return /iP(hone|od|ad)/.test(navigator.platform) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
-      }
-
-      async function downloadRaw(url, filename) {
-        statusEl.textContent = 'Preparing...';
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-          const res = await fetch(url, { mode: 'cors', signal: controller.signal });
-          clearTimeout(timeoutId);
-
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          if (res.type === 'opaque') throw new Error('Opaque response');
-
-          const blob = await res.blob();
-
-          if (isIOS()) {
-            const objectUrl = URL.createObjectURL(blob);
-            window.open(objectUrl, '_blank', 'noopener');
-            statusEl.textContent = 'Opened in new tab.';
-            setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-            return;
-          }
-
-          const objectUrl = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = objectUrl;
-          a.download = filename || '';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          statusEl.textContent = 'Download started.';
-          setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
-        } catch (err) {
-          console.warn('download failed', err);
-          statusEl.innerHTML = 'Automatic download failed. <a class="raw-link" href="' + url + '" target="_blank" rel="noopener">Open raw file</a>';
-          try { window.open(url, '_blank', 'noopener'); } catch(e) {}
-        }
-      }
-
-      document.getElementById('dl-unix').addEventListener('click', function(){
-        downloadRaw(unixUrl, 'install.sh');
-      });
-
-      document.getElementById('dl-win').addEventListener('click', function(){
-        downloadRaw(winUrl, 'install.ps1');
-      });
-    })();
-  </script>
-</body>
-</html>
+<h4>Quick test in a VM</h4>
+<div class="note">
+  <ol>
+    <li>Open the project folder and run:<pre>python3 -m http.server 8000</pre></li>
+    <li>Open a browser to:<pre>http://localhost:8000/download_en.html</pre></li>
+    <li>Click the download buttons and check your Downloads folder.</li>
+  </ol>
+</div>

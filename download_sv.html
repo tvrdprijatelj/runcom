@@ -1,159 +1,44 @@
-<!doctype html>
-<html lang="sv">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>runcom — Nedladdare</title>
-  <style>
-    :root{--bg:#071026;--panel:#081423;--accent:#46d2ff;--accent2:#7ef2c9;--muted:#9fb}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial;background:linear-gradient(180deg,var(--bg),#071022);color:#eaf;display:flex;align-items:center;justify-content:center;padding:36px}
-    .card{width:min(920px,98%);background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:14px;padding:24px;border:1px solid rgba(255,255,255,0.04)}
-    .hdr{display:flex;gap:12px;align-items:center}
-    .logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#06111f;font-weight:800}
-    h1{margin:0}
-    p.lead{color:var(--muted);margin:6px 0 12px}
-    .actions{display:flex;gap:12px;margin:12px 0;flex-wrap:wrap}
-    .btn{padding:12px 14px;border-radius:10px;text-decoration:none;font-weight:800;display:inline-block;border:none;cursor:pointer}
-    .primary{background:linear-gradient(135deg,#76a9ff,#90baff);color:#05111a}
-    .secondary{background:rgba(255,255,255,0.03);color:#eaf;border:1px solid rgba(255,255,255,0.03)}
-    .panel{margin-top:12px;padding:12px;border-radius:10px;background:rgba(255,255,255,0.02)}
-    pre{background:rgba(0,0,0,0.45);padding:10px;border-radius:8px;overflow:auto}
-    .note{color:var(--muted)}
-    .small{font-size:0.95rem;color:var(--muted)}
-    .status{margin-top:10px;color:var(--muted)}
-    a.raw-link{color:var(--accent)}
-    @media(max-width:720px){.actions{flex-direction:column}.btn{width:100%}}
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="hdr">
-      <div class="logo">R</div>
-      <div>
-        <h1>runcom — Nedladdare</h1>
-        <p class="lead">Ladda ner installationsassistenten. Skriptet hämtar senaste releasen, skapar en Python-virtualenv och installerar beroenden om det behövs.</p>
-      </div>
-    </div>
-
-    <div class="actions">
-      <button id="dl-unix" class="btn primary">Ladda ner installer — Linux / macOS</button>
-      <button id="dl-win" class="btn secondary">Ladda ner installer — Windows</button>
-    </div>
-
-    <div id="status" class="status">&nbsp;</div>
-
-    <div class="panel">
-      <h3>Vad installern gör</h3>
-      <ul class="note">
-        <li>hämtar senaste GitHub-release</li>
-        <li>laddar ner och packar upp releasen</li>
-        <li>skapar en Python virtual environment</li>
-        <li>installerar pip-beroenden från requirements.txt om filen finns</li>
-        <li>frågar innan system-Python installeras om det saknas</li>
-      </ul>
-
-      <h4>Rekommenderat användningsflöde</h4>
-      <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
-less install.sh
-bash install.sh
-
-# Windows PowerShell
-Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
-notepad .\install.ps1
-powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
-
-      <h4>Säkerhet</h4>
-      <p class="note">Kör inte remote-skript utan att först granska dem. Installern frågar innan systemnivå-paket installeras.</p>
-
-      <h4>Snabb nedladdning</h4>
-      <div class="note">
-        <ul>
-          <li><strong>Inspektera & kör — Linux / macOS</strong>
-            <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+<h3>Snabba steg (per operativsystem)</h3>
+<div class="note">
+  <h4>macOS</h4>
+  <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
 less install.sh
 bash install.sh</pre>
-          </li>
-          <li><strong>Windows (PowerShell)</strong>
-            <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
+
+  <h4>Ubuntu / Debian</h4>
+  <pre>sudo apt update && sudo apt install -y curl
+curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+
+  <h4>Fedora / RHEL</h4>
+  <pre>sudo dnf install -y curl
+curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+
+  <h4>Arch Linux</h4>
+  <pre>sudo pacman -Syu --noconfirm curl
+curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+
+  <h4>Övriga Linux</h4>
+  <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+
+  <h4>Windows (PowerShell)</h4>
+  <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
 notepad .\install.ps1
 powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
-          </li>
-          <li>Om webbläsaren visar skriptet som text: högerklicka → "Spara som", eller använd kommandona ovan. Knapparna på sidan försöker spara automatiskt och öppnar raw-filen i ny flik om det blockeras.</li>
-        </ul>
-      </div>
+</div>
 
-    </div>
-
-    <div class="small" style="margin-top:12px;"><a href="download.html" style="color:var(--accent);text-decoration:none;">← Tillbaka till språkval</a></div>
-  </div>
-
-  <script>
-    (function(){
-      const rawBase = 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main';
-      const unixUrl = rawBase + '/install.sh';
-      const winUrl = rawBase + '/install.ps1';
-      const statusEl = document.getElementById('status');
-
-      function isIOS() {
-        // iOS detection (covers iPhone/iPad/iPod and iPadOS Safari)
-        return /iP(hone|od|ad)/.test(navigator.platform) || (navigator.userAgent.includes('Mac') && 'ontouchend' in document);
-      }
-
-      async function downloadRaw(url, filename) {
-        statusEl.textContent = 'Hämtar...';
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-          const res = await fetch(url, { mode: 'cors', signal: controller.signal });
-          clearTimeout(timeoutId);
-
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-
-          // If response is opaque (CORS), fall back
-          if (res.type === 'opaque') throw new Error('Opaque response (CORS)');
-
-          const blob = await res.blob();
-
-          // iOS Safari: download attribute often not supported for blob URLs — open in new tab
-          if (isIOS()) {
-            const objectUrl = URL.createObjectURL(blob);
-            window.open(objectUrl, '_blank', 'noopener');
-            statusEl.innerHTML = 'Öppnade filen i ny flik — använd Dela → Spara i Filer för att spara den.';
-            // revoke later
-            setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
-            return;
-          }
-
-          // Normal flow: create object URL and use anchor download
-          const objectUrl = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = objectUrl;
-          a.download = filename || '';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          statusEl.textContent = 'Nedladdning startad. Kolla din nedladdningsmapp.';
-
-          // revoke after short delay to ensure download started
-          setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
-        } catch (err) {
-          console.warn('download failed', err);
-          // Provide helpful fallback and visible raw link
-          statusEl.innerHTML = 'Automatisk nedladdning misslyckades: ' + (err.message || err) + '. <a class="raw-link" href="' + url + '" target="_blank" rel="noopener">Öppna raw-filen</a>';
-          try { window.open(url, '_blank', 'noopener'); } catch(e) { /* ignore */ }
-        }
-      }
-
-      document.getElementById('dl-unix').addEventListener('click', function(){
-        downloadRaw(unixUrl, 'install.sh');
-      });
-
-      document.getElementById('dl-win').addEventListener('click', function(){
-        downloadRaw(winUrl, 'install.ps1');
-      });
-    })();
-  </script>
-</body>
-</html>
+<h4>Snabb test i en virtuell dator</h4>
+<div class="note">
+  <ol>
+    <li>Gå till projektmappen och kör:<pre>python3 -m http.server 8000</pre></li>
+    <li>Öppna webbläsaren och gå till:<pre>http://localhost:8000/download_sv.html</pre></li>
+    <li>Klicka på nedladdningsknapparna och kontrollera Downloads-mappen.</li>
+  </ol>
+</div>
