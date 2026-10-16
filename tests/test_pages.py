@@ -1,6 +1,7 @@
 from html.parser import HTMLParser
 from pathlib import Path
 import unittest
+from urllib.parse import urlsplit
 ROOT=Path(__file__).resolve().parents[1]
 class Page(HTMLParser):
     def __init__(self):
@@ -21,4 +22,4 @@ class PageTests(unittest.TestCase):
                 for link in page.links:
                     if link.startswith('https:'):continue
                     if link.startswith('#'):self.assertIn(link[1:],page.ids)
-                    else:self.assertTrue((ROOT/link).is_file(),link)
+                    else:self.assertTrue((ROOT/urlsplit(link).path).is_file(),link)

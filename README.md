@@ -70,7 +70,7 @@ node --check download.js
 node tests/test_download.cjs
 ```
 
-CI runs Python tests on Linux (3.8 and 3.12), Windows and macOS. Linux uses Xvfb for real Tk widget tests. Checks include file preservation on encoding/write failures, external changes, streaming output, bounded queues, actual script execution and stopping, and offline install/update fixtures. Native Windows checks exercise cmd paths containing spaces and `&`, PowerShell parsing, and the Windows installer.
+CI runs Python tests on Linux (3.8, 3.12 and 3.14), Windows and macOS. Linux uses Xvfb for real Tk widget tests. Checks include file preservation on encoding/write failures, external changes, streaming output, bounded queues, actual script execution and stopping, and offline install/update fixtures. Native Windows checks exercise cmd paths containing spaces and `&`, PowerShell parsing, and the Windows installer.
 
 Browser tests use Playwright/Chromium to check Swedish and English pages at desktop and mobile sizes, downloads, version selection and clipboard behavior. CI saves page screenshots as artifacts. These are automated functional checks, not exhaustive testing of every desktop configuration.
 

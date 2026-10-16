@@ -304,7 +304,7 @@ class App(tk.Tk):
                  fg="#a5b5cc", font=("TkDefaultFont", 9)).pack(side="left", padx=12)
         osb = tk.Scrollbar(of)
         osb.pack(side="right", fill="y")
-        self.output = tk.Text(of, height=10, wrap="word", state="disabled", bg="#1e1e1e", fg="#dcdcdc",
+        self.output = tk.Text(of, height=10, wrap="char", state="disabled", bg="#1e1e1e", fg="#dcdcdc",
                               font=self.mono_small, yscrollcommand=osb.set)
         self.output.pack(side="left", fill="both", expand=True)
         osb.config(command=self.output.yview)

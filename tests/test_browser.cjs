@@ -28,6 +28,7 @@ const server = http.createServer((request,response)=>{
         await page.goto(`${base}/download_${lang}.html`);
         await page.screenshot({path:path.join(root,`.test-artifacts/${lang}-${width}.png`),fullPage:true});
         assert.equal(await page.locator('html').getAttribute('lang'),lang);
+        assert.equal(await page.locator('#version').inputValue(),'main');
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         await page.locator('#os').selectOption('windows');
         await page.locator('#version').selectOption('main');

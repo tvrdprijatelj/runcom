@@ -63,8 +63,8 @@ class ApplicationTests(unittest.TestCase):
     def test_shell_extension_respects_shebang(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / 'my script.sh'
-            path.write_text('#!/bin/sh\nprintf "%s" "${BASH_VERSION-unset}"\n')
-            self.assertEqual(subprocess.check_output(runcom.script_command(path), text=True), 'unset')
+            path.write_text('#!/usr/bin/env python3\nprint("success")\n')
+            self.assertEqual(subprocess.check_output(runcom.script_command(path), text=True).strip(), 'success')
 
     @unittest.skipIf(os.name == 'nt', 'Unix execution')
     def test_plain_text_is_not_executed_as_a_program(self):
