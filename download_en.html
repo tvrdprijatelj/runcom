@@ -64,6 +64,32 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
 
       <h4>Security notice</h4>
       <p class="note">Do not run remote scripts without inspecting them first. The installer asks before performing system-level package installs.</p>
+
+      <h4>Download instructions</h4>
+      <ol class="note">
+        <li><strong>Inspect before running:</strong> download and read the script first.</li>
+        <li><strong>Linux / macOS:</strong>
+          <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o install.sh
+less install.sh
+bash install.sh</pre>
+        </li>
+        <li><strong>Windows (PowerShell):</strong>
+          <pre>Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1 -OutFile install.ps1
+notepad .\install.ps1
+powershell -ExecutionPolicy Bypass -File .\install.ps1</pre>
+        </li>
+        <li><strong>Direct pipe (not recommended):</strong>
+          <pre>curl -fsSL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh | bash</pre>
+          (Only use if you understand the risks — inspect script first.)
+        </li>
+        <li><strong>If the browser shows plain text:</strong> right-click → Save as, or use the curl/Invoke-WebRequest commands above. The download buttons on this page attempt an automatic save; if blocked the raw file will open in a new tab so you can save it.</li>
+        <li><strong>Verify (optional):</strong> compare SHA256 with an official CHECKSUMS file if available:
+          <pre>sha256sum install.sh  # Linux
+shasum -a 256 install.sh # macOS
+Get-FileHash .\install.ps1 -Algorithm SHA256 # PowerShell</pre>
+        </li>
+      </ol>
+
     </div>
 
     <div class="small" style="margin-top:12px;"><a href="download.html" style="color:var(--accent);text-decoration:none;">← Back to language selector</a></div>
