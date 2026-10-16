@@ -73,7 +73,7 @@ fi
 import os, pathlib, shlex, sys, tempfile
 folder = pathlib.Path(sys.argv[1]).resolve()
 def replace_file(path, data, mode):
-    fd, temporary = tempfile.mkstemp(prefix='.runcom-', dir=str(folder))
+    fd, temporary = tempfile.mkstemp(prefix='.runcom-', dir=str(path.parent))
     try:
         with os.fdopen(fd, 'wb') as stream:
             stream.write(data)
@@ -92,5 +92,31 @@ for name in ('help.html', 'help.css', 'style.css'):
 launcher = folder / 'runcom'
 launcher_text = ('#!/bin/sh\nexec ' + shlex.quote(str(folder / 'venv/bin/python')) + ' ' + shlex.quote(str(folder / 'runcom.py')) + ' "$@"\n')
 replace_file(launcher, launcher_text.encode(), 0o700)
-print('Installation complete. Start Runcom with:\n' + shlex.quote(str(launcher)))
+if sys.platform.startswith('linux'):
+    # Desktop Entry: escape the string layer, then the Exec argument layer.
+    def desktop_value(value):
+        return (str(value).replace('\\', '\\\\').replace('\n', '\\n')
+                .replace('\r', '\\r').replace('\t', '\\t'))
+    def exec_argument(value):
+        argument = str(value).replace('%', '%%')
+        for char in ('\\', '"', '`', '$'):
+            argument = argument.replace(char, '\\' + char)
+        return desktop_value('"' + argument + '"')
+    data_home = pathlib.Path(os.environ.get('XDG_DATA_HOME') or pathlib.Path.home() / '.local/share')
+    if not data_home.is_absolute():
+        data_home = pathlib.Path.home() / '.local/share'
+    entry = data_home / 'applications/runcom.desktop'
+    try:
+        entry.parent.mkdir(parents=True, exist_ok=True)
+        text = ('[Desktop Entry]\nType=Application\nVersion=1.0\nName=Runcom\n'
+                'Comment=Create, edit and run scripts\nComment[sv]=Skapa, redigera och kör skript\n'
+                'Exec=' + exec_argument('/bin/sh') + ' ' + exec_argument(launcher) + '\n'
+                'Path=' + desktop_value(folder) + '\n'
+                'Icon=utilities-terminal\nTerminal=false\nCategories=Development;Utility;\n'
+                'Keywords=script;editor;python;bash;skript;\n')
+        replace_file(entry, text.encode('utf-8'), 0o644)
+        print('Application menu shortcut: ' + str(entry))
+    except OSError as error:
+        print('Could not create the application menu shortcut: ' + str(error), file=sys.stderr)
+print('Installation complete. Start Runcom from your application menu (Linux), or with:\n' + shlex.quote(str(launcher)))
 PY

@@ -24,8 +24,8 @@ function updateOS(){
   link.href = win ? 'install.ps1' : 'install.sh';
   link.download = win ? 'runcom-install.ps1' : 'runcom-install.sh';
   document.getElementById('launch').textContent = win
-    ? text('Starta med genvägen Runcom på skrivbordet. Installationen visar även ett startkommando.', 'Launch with the Runcom desktop shortcut. The installer also prints a launch command.')
-    : text('Installationen visar startkommandot. Standardplats: ~/.local/share/runcom/runcom.', 'The installer prints the launch command. Default location: ~/.local/share/runcom/runcom.');
+    ? text('Sök efter Runcom i Start-menyn eller använd skrivbordsgenvägen. Installationen visar också ett startkommando.', 'Find Runcom in the Start menu or use the desktop shortcut. The installer also prints a launch command.')
+    : text('Linux: sök efter Runcom i programmenyn. Installationen visar även startkommandot. Standardplats: ~/.local/share/runcom/runcom.', 'Linux: find Runcom in the application menu. The installer also prints a launch command. Default location: ~/.local/share/runcom/runcom.');
   status.textContent = main
     ? text('Valt: aktuell källkod på main, inklusive de nya rättningarna.', 'Selected: current source on main, including the latest fixes.')
     : text('Valt: senaste publicerade release. Den kan vara äldre än rättningarna på main.', 'Selected: latest published release. It may predate fixes on main.');

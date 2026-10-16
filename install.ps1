@@ -96,18 +96,33 @@ finally:
         }
     }
     if (-not $NoShortcut) {
-    try {
-        $shell = New-Object -ComObject WScript.Shell
-        $shortcut = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) 'Runcom.lnk'))
-        $shortcut.TargetPath = Join-Path $venv 'Scripts\pythonw.exe'
-        $shortcut.Arguments = '"' + $appPath + '"'
-        $shortcut.WorkingDirectory = $InstallDir
-        $shortcut.Save()
-    } catch {
-        Write-Warning 'Installed successfully, but the desktop shortcut could not be created.'
+        try {
+            $shell = New-Object -ComObject WScript.Shell
+        } catch {
+            $shell = $null
+            Write-Warning 'Installed successfully, but Windows shortcut services are unavailable.'
+        }
+        $shortcutLocations = @(
+            (Join-Path ([Environment]::GetFolderPath('Programs')) 'Runcom.lnk'),
+            (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Runcom.lnk')
+        )
+        foreach ($location in $shortcutLocations) {
+            if (-not $shell) { continue }
+            try {
+                New-Item -ItemType Directory -Force -Path (Split-Path $location) | Out-Null
+                $shortcut = $shell.CreateShortcut($location)
+                $shortcut.TargetPath = Join-Path $venv 'Scripts\pythonw.exe'
+                $shortcut.Arguments = '"' + $appPath + '"'
+                $shortcut.WorkingDirectory = $InstallDir
+                $shortcut.Description = 'Runcom script editor'
+                $shortcut.Save()
+                Write-Host "Shortcut created: $location"
+            } catch {
+                Write-Warning "Installed successfully, but could not create shortcut: $location"
+            }
+        }
     }
-    }
-    Write-Host "Installed in $InstallDir. Start with the desktop shortcut or:"
+    Write-Host "Installed in $InstallDir. Search for Runcom in Start, use the desktop shortcut or run:"
     Write-Host ("& '" + $venvPython.Replace("'", "''") + "' '" + $appPath.Replace("'", "''") + "'")
 } catch {
     Write-Host "Installation failed: $_" -ForegroundColor Red

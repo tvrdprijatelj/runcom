@@ -1,4 +1,8 @@
+import ctypes
+import ctypes.util
 import os
+import sys
+import time
 from pathlib import Path
 import subprocess
 import tempfile
@@ -31,7 +35,7 @@ else:
         self.install = self.root / 'app with spaces'
         self.env = dict(os.environ, PATH=str(bin_dir)+os.pathsep+os.environ['PATH'],
                         RUNCOM_FIXTURE=str(self.fixture), RUNCOM_INSTALL_DIR=str(self.install),
-                        RUNCOM_REQUESTS=str(self.root/'requests.log'), PIP_NO_INDEX='1', PIP_DISABLE_PIP_VERSION_CHECK='1')
+                        RUNCOM_REQUESTS=str(self.root/'requests.log'), XDG_DATA_HOME=str(self.root/'xdg data'), PIP_NO_INDEX='1', PIP_DISABLE_PIP_VERSION_CHECK='1')
 
     def tearDown(self):
         self.temp.cleanup()
@@ -49,6 +53,41 @@ else:
             result = self.run_installer()
             self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
             self.assertEqual(subprocess.check_output([str(self.install/'runcom')], text=True).strip(), output)
+
+    @unittest.skipUnless(sys.platform.startswith('linux'), 'Linux program menu')
+    def test_menu_shortcut_launches_and_update_reuses_entry(self):
+        library = ctypes.util.find_library('gio-2.0')
+        if not library:
+            self.skipTest('GIO unavailable for native desktop-entry validation')
+        self.install = self.root / 'Runcom % with "quotes" $dollar `tick` and spaces'
+        self.env['RUNCOM_INSTALL_DIR'] = str(self.install)
+        marker = self.root/'launched.txt'
+        self.archive({'release/runcom.py': 'from pathlib import Path\nPath('+repr(str(marker))+').write_text("launched")\n'})
+        for _ in range(2):
+            result = self.run_installer('--ref','main')
+            self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        applications = Path(self.env['XDG_DATA_HOME'])/'applications'
+        entries = list(applications.glob('*.desktop'))
+        self.assertEqual(len(entries),1)
+        entry=entries[0]
+        self.assertIn('Terminal=false',entry.read_text())
+        gio = ctypes.CDLL(library)
+        gio.g_desktop_app_info_new_from_filename.argtypes=[ctypes.c_char_p]
+        gio.g_desktop_app_info_new_from_filename.restype=ctypes.c_void_p
+        gio.g_app_info_launch.argtypes=[ctypes.c_void_p,ctypes.c_void_p,ctypes.c_void_p,ctypes.POINTER(ctypes.c_void_p)]
+        gio.g_app_info_launch.restype=ctypes.c_int
+        gio.g_object_unref.argtypes=[ctypes.c_void_p]
+        info=gio.g_desktop_app_info_new_from_filename(os.fsencode(entry))
+        self.assertTrue(info,'GIO rejected the menu entry')
+        try:
+            error=ctypes.c_void_p()
+            self.assertTrue(gio.g_app_info_launch(info,None,None,ctypes.byref(error)), 'Menu entry could not launch')
+            deadline=time.monotonic()+5
+            while not marker.exists() and time.monotonic()<deadline:
+                time.sleep(0.05)
+            self.assertEqual(marker.read_text(),'launched')
+        finally:
+            gio.g_object_unref(info)
 
     def test_main_ref_bypasses_old_release(self):
         result = self.run_installer('--ref', 'main')

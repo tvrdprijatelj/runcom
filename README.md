@@ -62,7 +62,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1 -Ref main
 
 The download page defaults to current fixes on main and lets you select the latest published release instead. The generated commands download a fresh installer to a fixed filename before running it, avoiding accidentally running an older `install.sh` left in Downloads. A published release can be older than main; the page labels this explicitly.
 
-Linux/macOS installs to `${XDG_DATA_HOME:-~/.local/share}/runcom`. The installer prints the full launch command. Set `RUNCOM_INSTALL_DIR` to choose another location. Windows installs to `%LOCALAPPDATA%\Runcom` and adds a desktop shortcut; use `-InstallDir` to customize the location. Run the installer again to update; scripts in `~/skript` are kept separately.
+Linux/macOS installs to `${XDG_DATA_HOME:-~/.local/share}/runcom`. The installer prints the full launch command. Set `RUNCOM_INSTALL_DIR` to choose another location. On Linux the installer adds `runcom.desktop` to `${XDG_DATA_HOME:-~/.local/share}/applications`, so you can search for Runcom in the application menu. Windows installs to `%LOCALAPPDATA%\Runcom` and adds Start-menu and desktop shortcuts; use `-InstallDir` to customize the location. Run the installer again to update; scripts in `~/skript` are kept separately.
 
 ## Validation
 
