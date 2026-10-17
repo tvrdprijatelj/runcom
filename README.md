@@ -102,3 +102,7 @@ The Swedish and English download pages install the matching app language. Comman
 ## Updates in the app
 
 Click **Uppdatera / Update** next to Help to check the latest published GitHub release. Confirm to install it, then restart Runcom. Checks and downloads run in the background. Scripts and language preferences are preserved. Older or diverged releases are not installed. Existing installations without version metadata need to run the updated installer once. Git checkouts must have no uncommitted changes.
+
+## Uninstall
+
+Download `uninstall.sh` (Linux/macOS) or `uninstall.ps1` (Windows) from either download page. Close Runcom, inspect the script, then run `bash uninstall.sh` or `powershell -ExecutionPolicy Bypass -File .\uninstall.ps1` and confirm. The scripts remove installer-owned files, the virtual environment and matching application shortcuts. Your scripts and extra files are kept. For a custom location, set `RUNCOM_INSTALL_DIR` (Bash) or use `-InstallDir` (PowerShell). `--yes` / `-Yes` skips confirmation.
