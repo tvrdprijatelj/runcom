@@ -25,12 +25,17 @@ try {
         $env:RUNCOM_TEST_VALUE = $expected
         python -c 'import os,zipfile; z=zipfile.ZipFile(os.environ["RUNCOM_FIXTURE"],"w"); z.writestr("release/runcom.py", "print("+repr(os.environ["RUNCOM_TEST_VALUE"])+")"); z.writestr("release/help.html","<h1>Help</h1>"); z.writestr("release/help.css","body{}"); z.writestr("release/style.css","body{}"); z.close()'
         if ($LASTEXITCODE) { throw 'Fixture generation failed.' }
+        python -c 'import os,sys,zipfile; z=zipfile.ZipFile(os.environ["RUNCOM_FIXTURE"],"a"); [z.write(os.path.join(sys.argv[1],name),"release/"+name) for name in ("runcom.png","runcom.ico")]; z.close()' (Join-Path $PSScriptRoot '..')
+        if ($LASTEXITCODE) { throw 'Icon fixture generation failed.' }
         & $installer -InstallDir $install -Ref main
         $shell = New-Object -ComObject WScript.Shell
         foreach ($directory in @($desktop,$programs)) {
             $link = Join-Path $directory 'Runcom.lnk'
             if (-not (Test-Path $link)) { throw "Shortcut missing: $link" }
             $saved = $shell.CreateShortcut($link)
+            $iconPath = $saved.IconLocation -replace ',0$', ''
+            python -c 'import os,sys; assert os.path.samefile(sys.argv[1],sys.argv[2])' $iconPath (Join-Path $install 'runcom.ico')
+            if ($LASTEXITCODE) { throw 'Wrong shortcut icon' }
             python -c 'import os,sys; assert os.path.samefile(sys.argv[1],sys.argv[2])' $saved.TargetPath (Join-Path $install 'venv\Scripts\pythonw.exe')
             if ($LASTEXITCODE) { throw 'Wrong shortcut target' }
             python -c 'import os,sys; assert os.path.samefile(sys.argv[1],sys.argv[2])' $saved.Arguments.Trim('"') (Join-Path $install 'runcom.py')
@@ -39,7 +44,7 @@ try {
             if ($LASTEXITCODE) { throw 'Wrong shortcut working directory' }
         }
         $result = & (Join-Path $install 'venv\Scripts\python.exe') (Join-Path $install 'runcom.py')
-        foreach ($asset in @('help.html', 'help.css', 'style.css')) {
+        foreach ($asset in @('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico')) {
             if (-not (Test-Path (Join-Path $install $asset))) { throw "Missing offline help asset: $asset" }
         }
         if ($LASTEXITCODE -ne 0 -or $result.Trim() -ne $expected) { throw "Installed app did not produce $expected" }

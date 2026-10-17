@@ -66,7 +66,8 @@ else:
         self.install = self.root / name
         self.env['RUNCOM_INSTALL_DIR'] = str(self.install)
         marker = self.root/'launched.txt'
-        self.archive({'release/runcom.py': 'from pathlib import Path\nPath('+repr(str(marker))+').write_text("launched")\n'})
+        self.archive({'release/runcom.py': 'from pathlib import Path\nPath('+repr(str(marker))+').write_text("launched")\n',
+                      'release/runcom.png': (ROOT/'runcom.png').read_bytes()})
         for _ in range(2):
             result = self.run_installer('--ref','main')
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
@@ -75,6 +76,8 @@ else:
         self.assertEqual(len(entries),1)
         entry=entries[0]
         self.assertIn('Terminal=false',entry.read_text())
+        expected_icon = str(self.install/'runcom.png').replace('\\', '\\\\')
+        self.assertIn('Icon='+expected_icon+'\n', entry.read_text())
         gio = ctypes.CDLL(library)
         gio.g_desktop_app_info_new_from_filename.argtypes=[ctypes.c_char_p]
         gio.g_desktop_app_info_new_from_filename.restype=ctypes.c_void_p
@@ -102,11 +105,11 @@ else:
 
     def test_help_assets_are_available_offline(self):
         self.archive({'release/runcom.py': 'print("installed")',
-                      **{'release/'+name: (ROOT/name).read_text(encoding='utf-8')
-                         for name in ('help.html','help.css','style.css')}})
+                      **{'release/'+name: (ROOT/name).read_bytes()
+                         for name in ('help.html','help.css','style.css','runcom.png','runcom.ico')}})
         result = self.run_installer('--ref','main')
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-        for name in ('help.html','help.css','style.css'):
+        for name in ('help.html','help.css','style.css','runcom.png','runcom.ico'):
             self.assertEqual((self.install/name).read_bytes(),(ROOT/name).read_bytes())
 
     def test_ref_is_url_encoded(self):

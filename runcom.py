@@ -171,6 +171,14 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Runcom")
+        icon_dir = Path(__file__).resolve().parent
+        try:
+            self._app_icon = tk.PhotoImage(file=str(icon_dir / "runcom.png"))
+            self.iconphoto(True, self._app_icon)
+            if IS_WIN:
+                self.iconbitmap(default=str(icon_dir / "runcom.ico"))
+        except (tk.TclError, OSError):
+            pass  # Older installations may not include the icon assets.
         self.geometry("1180x780")
         self.minsize(820, 540)
 

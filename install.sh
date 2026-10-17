@@ -85,7 +85,7 @@ def replace_file(path, data, mode):
         if os.path.exists(temporary):
             os.unlink(temporary)
 replace_file(folder / 'runcom.py', (pathlib.Path(sys.argv[2]) / 'runcom.py').read_bytes(), 0o600)
-for name in ('help.html', 'help.css', 'style.css'):
+for name in ('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico'):
     asset = pathlib.Path(sys.argv[2]) / name
     if asset.is_file():
         replace_file(folder / name, asset.read_bytes(), 0o600)
@@ -112,7 +112,8 @@ if sys.platform.startswith('linux'):
                 'Comment=Create, edit and run scripts\nComment[sv]=Skapa, redigera och kör skript\n'
                 'Exec=' + exec_argument('/bin/sh') + ' ' + exec_argument(launcher) + '\n'
                 'Path=' + desktop_value(folder) + '\n'
-                'Icon=utilities-terminal\nTerminal=false\nCategories=Development;Utility;\n'
+                'Icon=' + desktop_value(folder / 'runcom.png' if (folder / 'runcom.png').is_file() else 'utilities-terminal') + '\n'
+                'Terminal=false\nCategories=Development;Utility;\n'
                 'Keywords=script;editor;python;bash;skript;\n')
         replace_file(entry, text.encode('utf-8'), 0o644)
         print('Application menu shortcut: ' + str(entry))

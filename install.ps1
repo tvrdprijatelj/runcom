@@ -89,7 +89,7 @@ finally:
         os.unlink(temporary)
 '@
     Invoke-Python -Exe $py -Arguments @('-c', $copy, (Join-Path $folder 'runcom.py'), $appPath)
-    foreach ($asset in @('help.html', 'help.css', 'style.css')) {
+    foreach ($asset in @('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico')) {
         $assetSource = Join-Path $folder $asset
         if (Test-Path $assetSource -PathType Leaf) {
             Invoke-Python -Exe $py -Arguments @('-c', $copy, $assetSource, (Join-Path $InstallDir $asset))
@@ -114,6 +114,10 @@ finally:
                 $shortcut.TargetPath = Join-Path $venv 'Scripts\pythonw.exe'
                 $shortcut.Arguments = '"' + $appPath + '"'
                 $shortcut.WorkingDirectory = $InstallDir
+                $iconPath = Join-Path $InstallDir 'runcom.ico'
+                if (Test-Path $iconPath -PathType Leaf) {
+                    $shortcut.IconLocation = $iconPath + ',0'
+                }
                 $shortcut.Description = 'Runcom script editor'
                 $shortcut.Save()
                 Write-Host "Shortcut created: $location"
