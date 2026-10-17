@@ -39,7 +39,7 @@ class TerminalTests(unittest.TestCase):
     def test_persistent_shell_directory_unicode_and_input(self):
         self.session.send("mkdir 'sub folder'; cd 'sub folder'; RUNCOM_TEST=kept\n")
         self.session.send("printf '\\n%s|%s|åäö\\n' \"$RUNCOM_TEST\" \"$PWD\"\n")
-        self.until('kept|' + self.folder.name + '/sub folder|åäö')
+        self.until('kept|' + str(Path(self.folder.name).resolve()) + '/sub folder|åäö')
         self.session.send("read -r reply; printf '\\nreply=%s\\n' \"$reply\"\n")
         self.session.send('hello world\n')
         self.until('reply=hello world')

@@ -29,4 +29,4 @@ class LanguageTests(unittest.TestCase):
             self.assertEqual(self.load(language)['LANGUAGE'], 'sv')
 
     def test_python38_syntax(self):
-        ast.parse((ROOT / 'runcom.py').read_text(), feature_version=(3, 8))
+        ast.parse((ROOT / 'runcom.py').read_text(encoding='utf-8'), feature_version=(3, 8))

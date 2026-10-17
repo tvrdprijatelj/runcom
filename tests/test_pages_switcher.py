@@ -1,3 +1,4 @@
+import io
 import json
 import threading
 import unittest
@@ -101,7 +102,7 @@ class PagesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             PagesClient("").status()
         urlopen.assert_not_called()
-        urlopen.side_effect = HTTPError("https://api.github.com", 401, "secret", {}, None)
+        urlopen.side_effect = HTTPError("https://api.github.com", 401, "secret", {}, io.BytesIO(b""))
         with self.assertRaisesRegex(ValueError, "ogiltig"):
             PagesClient("test").status()
 

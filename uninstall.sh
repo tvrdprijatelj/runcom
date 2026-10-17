@@ -19,7 +19,7 @@ fi
 PYTHON="$(command -v python3 || command -v python || true)"
 [ -n "$PYTHON" ] || { echo 'Python is required.' >&2; exit 1; }
 "$PYTHON" - "$INSTALL_DIR" <<'PY'
-import os, pathlib, shutil, sys
+import os, pathlib, shlex, shutil, sys
 folder = pathlib.Path(sys.argv[1]).expanduser()
 if folder.is_symlink():
     raise SystemExit('Refusing a symlink installation directory')
@@ -63,7 +63,15 @@ for name in ('runcom.desktop', 'runcom-uninstall.desktop'):
         own = any(pathlib.Path(desktop_unescape(value)).resolve() == folder for value in paths)
         # Compatibility with older entries which contained only Exec.
         if not paths:
-            own = ('"' + str(folder / 'runcom') + '"') in text
+            for line in text.splitlines():
+                if not line.startswith('Exec='):
+                    continue
+                try:
+                    args = shlex.split(desktop_unescape(line[5:]))
+                    own = any(pathlib.Path(arg).name in ('runcom', 'runcom-uninstall')
+                              and pathlib.Path(arg).parent.resolve() == folder for arg in args)
+                except ValueError:
+                    own = False
         if own:
             entry.unlink()
 if folder.exists():
