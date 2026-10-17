@@ -57,10 +57,11 @@ try {
     $removeText = Get-Content $uninstaller -Raw
     $removeText = $removeText.Replace("[Environment]::GetFolderPath('Desktop')", "'" + $desktop.Replace("'", "''") + "'")
     $removeText = $removeText.Replace("[Environment]::GetFolderPath('Programs')", "'" + $programs.Replace("'", "''") + "'")
-    Set-Content -Path $uninstaller -Value $removeText -Encoding utf8
+    Set-Content -Path $uninstaller -Value $removeText -Encoding utf8BOM
     $personal = Join-Path $install 'my-script.py'
     Set-Content $personal 'print("keep")'
-    & $uninstaller -InstallDir $install -Yes
+    & $saved.TargetPath -NoProfile -ExecutionPolicy Bypass -File $uninstaller -InstallDir $install -Yes
+    if ($LASTEXITCODE) { throw "Windows uninstaller failed" }
     if (Test-Path (Join-Path $install 'runcom.py')) { throw 'Application was not removed' }
     if (Test-Path (Join-Path $install 'venv')) { throw 'Virtual environment was not removed' }
     if (-not (Test-Path $personal)) { throw 'Personal script was removed' }

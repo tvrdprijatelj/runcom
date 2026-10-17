@@ -1,4 +1,4 @@
-# Remove only installer-owned files; preserve user scripts and extra files.
+﻿# Remove only installer-owned files; preserve user scripts and extra files.
 param(
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Runcom'),
     [switch]$Yes
