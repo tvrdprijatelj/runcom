@@ -181,6 +181,18 @@ else:
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual((self.install/'runcom.py').read_text(), 'original')
 
+    def test_file_replacement_failure_rolls_back_application(self):
+        self.install.mkdir()
+        (self.install/'runcom.py').write_text('original')
+        (self.install/'help.html').mkdir()
+        self.archive({'release/runcom.py': 'print("new")',
+                      'release/help.html': '<h1>New help</h1>'})
+        result = self.run_installer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.install/'runcom.py').read_text(), 'original')
+        self.assertFalse((self.install/'runcom-revision').exists())
+        self.assertTrue((self.install/'help.html').is_dir())
+
     def test_options_have_clear_errors(self):
         for args in [('--ref',), ('--unknown',)]:
             self.assertEqual(self.run_installer(*args).returncode, 2)

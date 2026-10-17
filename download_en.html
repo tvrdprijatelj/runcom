@@ -1,18 +1,179 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Create, edit and run scripts in one focused workspace. Read output immediately or use a terminal for interactive commands."><title>Runcom — Write and run scripts</title><link rel="stylesheet" href="style.css?v=14822a7832"><script defer src="download.js?v=ff51a2bd5a"></script></head><body>
-<nav aria-label="Main navigation"><a class="brand" href="index.html">runcom<span>_</span></a><div><a class="button secondary nav-help" href="help.html" lang="sv">Hjälp (svenska)</a><a href="download_sv.html" lang="sv">Svenska</a><a href="https://github.com/tvrdprijatelj/runcom">GitHub ↗</a></div></nav>
-<main><section class="hero"><div><div class="eyebrow">Linux · macOS · Windows</div><h1>Your scripts. One workspace.</h1><p>Create, edit and run scripts in one focused workspace. Read output immediately or use a terminal for interactive commands.</p><div class="actions"><a class="button" href="#install">Get started ↓</a><a class="button secondary" href="https://github.com/tvrdprijatelj/runcom/releases/latest">Latest release</a></div><p>Python 3.8+ · Tkinter · Open source</p></div><div class="preview" aria-label="Example script and output"><div class="windowbar">runcom / hello.sh</div><div class="code">#!/usr/bin/env bash<br><b>echo</b> "Hello from Runcom!"</div><div class="result">› Hello from Runcom!<br>✓ Finished with exit code 0</div></div></section>
-<div class="grid"><section class="panel"><h2>01 · Write</h2><p>Start with a script template. Search your files and save with Ctrl+S.</p></section><section class="panel"><h2>02 · Run</h2><p>F5 runs inside the app. F6 opens a terminal for scripts that need input.</p></section><section class="panel"><h2>03 · Read the result</h2><p>See output and exit codes. Stop a running script with one button.</p></section></div>
-<section class="panel" id="install"><div class="eyebrow">Installation</div><h2>Choose your operating system</h2><p>The latest published release is selected by default. You can also choose the current fixes on main. The app is saved in your user directory. Run the installer again to update.</p><label for="os">Operating system</label> <select id="os"><option value="arch">Arch Linux</option><option value="ubuntu">Ubuntu / Debian</option><option value="fedora">Fedora</option><option value="mac">macOS</option><option value="windows">Windows</option><option value="linux">Other Linux</option></select>
-<p><label for="version">Version</label> <select id="version"><option value="release" selected>Latest published release</option><option value="main">Current fixes (main)</option></select></p><ol><li>Install prerequisites if needed.<pre id="prerequisites"></pre></li><li>Download and inspect the installer.<div class="actions"><a id="installer" class="button" href="install_en.sh" download="runcom-install.sh">Download installer</a></div></li><li>Fetch a fresh installer and run it from your terminal.<pre id="command"></pre><button id="copy" type="button">Copy command</button></li></ol><p id="status" role="status" aria-live="polite"></p><p id="launch"></p><noscript><p>Linux/macOS: <a href="install_en.sh" download="runcom-install.sh">install.sh</a> · Windows: <a href="install_en.ps1" download="runcom-install.ps1">install.ps1</a></p><pre>bash runcom-install.sh
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Create, edit and run scripts in one focused workspace. Read output immediately or use a terminal for interactive commands.">
+    <title>Runcom — Write and run scripts</title>
+    <link rel="stylesheet" href="style.css?v=14822a7832">
+    <script defer src="download.js?v=ff51a2bd5a"></script>
+  </head>
+  <body>
+    <nav aria-label="Main navigation">
+      <a class="brand" href="index.html">runcom<span>_</span>
+      </a>
+      <div>
+        <a class="button secondary nav-help" href="help.html" lang="sv">Hjälp (svenska)</a>
+        <a href="download_sv.html" lang="sv">Svenska</a>
+        <a href="https://github.com/tvrdprijatelj/runcom">GitHub ↗</a>
+      </div>
+    </nav>
+    <main>
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Linux · macOS · Windows</div>
+          <h1>Your scripts. One workspace.</h1>
+          <p>Create, edit and run scripts in one focused workspace. Read output immediately or use a terminal for interactive commands.</p>
+          <div class="actions">
+            <a class="button" href="#install">Get started ↓</a>
+            <a class="button secondary" href="https://github.com/tvrdprijatelj/runcom/releases/latest">Latest release</a>
+          </div>
+          <p>Python 3.8+ · Tkinter · Open source</p>
+        </div>
+        <div class="preview" aria-label="Example script and output">
+          <div class="windowbar">runcom / hello.sh</div>
+          <div class="code">#!/usr/bin/env bash<br><b>echo</b> "Hello from Runcom!"</div>
+          <div class="result">› Hello from Runcom!<br>✓ Finished with exit code 0</div>
+        </div>
+      </section>
+      <div class="grid">
+        <section class="panel">
+          <h2>01 · Write</h2>
+          <p>Start with a script template. Search your files and save with Ctrl+S.</p>
+        </section>
+        <section class="panel">
+          <h2>02 · Run</h2>
+          <p>F5 runs inside the app. F6 opens a terminal for scripts that need input.</p>
+        </section>
+        <section class="panel">
+          <h2>03 · Read the result</h2>
+          <p>See output and exit codes. Stop a running script with one button.</p>
+        </section>
+      </div>
+      <section class="panel" id="install">
+        <div class="eyebrow">Installation</div>
+        <h2>Choose your operating system</h2>
+        <p>The latest published release is selected by default. You can also choose the current fixes on main. The app is saved in your user directory. Run the installer again to update.</p>
+        <label for="os">Operating system</label>
+        <select id="os">
+          <option value="arch">Arch Linux</option>
+          <option value="ubuntu">Ubuntu / Debian</option>
+          <option value="fedora">Fedora</option>
+          <option value="mac">macOS</option>
+          <option value="windows">Windows</option>
+          <option value="linux">Other Linux</option>
+        </select>
+        <p>
+          <label for="version">Version</label>
+          <select id="version">
+            <option value="release" selected>Latest published release</option>
+            <option value="main">Current fixes (main)</option>
+          </select>
+        </p>
+        <ol>
+          <li>Install prerequisites if needed.<pre id="prerequisites"></pre>
+          </li>
+          <li>Download and inspect the installer.<div class="actions">
+              <a id="installer" class="button" href="install_en.sh" download="runcom-install.sh">Download installer</a>
+            </div>
+          </li>
+          <li>Fetch a fresh installer and run it from your terminal.<pre id="command"></pre>
+            <button id="copy" type="button">Copy command</button>
+          </li>
+        </ol>
+        <p id="status" role="status" aria-live="polite"></p>
+        <p id="launch"></p>
+        <noscript>
+          <p>Linux/macOS: <a href="install_en.sh" download="runcom-install.sh">install.sh</a> · Windows: <a href="install_en.ps1" download="runcom-install.ps1">install.ps1</a>
+          </p>
+          <pre>bash runcom-install.sh
 # Windows PowerShell:
-powershell -ExecutionPolicy Bypass -File .\runcom-install.ps1</pre></noscript>
-<details><summary>Manual launch and troubleshooting</summary><p>You can also download the source and run python3 runcom.py (Windows: py runcom.py). Install Tkinter through your system, not pip. Use the terminal (F6) for scripts that ask for input or passwords.</p><a href="https://github.com/tvrdprijatelj/runcom/archive/refs/heads/main.zip">Download current source (main)</a></details></section><section class="panel" id="uninstall"><div class="eyebrow">Uninstallation</div><h2>Uninstall Runcom — step by step</h2><p>Choose your Linux distribution or operating system. The app, its Python environment and associated shortcuts are removed. Your own scripts, including ~/skript and extra files in the installation folder, are preserved.</p><label for="uninstall-os">Distribution / operating system</label> <select id="uninstall-os"><option value="arch">Arch Linux / EndeavourOS / Manjaro</option><option value="ubuntu">Ubuntu</option><option value="debian">Debian</option><option value="mint">Linux Mint</option><option value="fedora">Fedora</option><option value="opensuse">openSUSE</option><option value="alpine">Alpine Linux</option><option value="linux" selected>Other Linux / not sure</option><option value="mac">macOS</option><option value="windows">Windows</option></select><p id="uninstall-distro"></p>
-<h3>Option 1: use the shortcut</h3><ol><li>Save your work. Close Runcom and any scripts that are still running.</li><li id="uninstall-menu"></li><li>Read the installation path shown in the terminal. Confirm with y or yes and press Enter. Answer n to cancel.</li></ol><p>This option is included with new installations from main. If the shortcut is missing, use the terminal method below directly.</p>
-<h3>Option 2: download the uninstaller</h3><ol><li id="uninstall-terminal"></li><li>Download the script with the button if you want to inspect it before running it.<div class="actions"><a id="uninstaller" class="button" href="uninstall.sh" download="runcom-uninstall.sh">Download uninstaller</a></div></li><li>Copy the commands below into your terminal. The first line fetches a fresh file; the second starts the uninstaller. Clicking Copy alone does not uninstall anything.<pre id="uninstall-command">curl -fL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/uninstall.sh -o runcom-uninstall.sh
-bash runcom-uninstall.sh</pre><button id="uninstall-copy" type="button">Copy uninstall commands</button></li><li>Check the installation folder and confirm in the terminal with y or yes. A normal per-user installation usually needs no sudo or administrator rights for removal.</li></ol><p id="uninstall-status" role="status" aria-live="polite"></p>
-<details><summary>If Python, Bash or curl is missing</summary><p id="uninstall-tools-note"></p><pre id="uninstall-tools"></pre><p>Install these tools only if they are missing, then retry the uninstall commands. The Linux uninstaller needs no pip packages or Tkinter.</p></details>
-<details><summary>I chose a custom installation folder</summary><p>The installed menu shortcut remembers the folder. For manual removal, specify the same folder used during installation. Replace the example path below with your actual path.</p><pre id="uninstall-custom">RUNCOM_INSTALL_DIR="/path/to/runcom" bash runcom-uninstall.sh</pre><p>Linux/macOS default: ~/.local/share/runcom, or $XDG_DATA_HOME/runcom when configured. Windows default: %LOCALAPPDATA%\Runcom.</p></details>
-<details><summary>How do I know it worked?</summary><p>The terminal reports that Runcom was uninstalled. App files and associated shortcuts should be gone. Folders containing your own files are kept, with a message explaining this. Search the application menu again; log out and back in if your desktop still shows an old entry.</p></details>
-<details><summary>Common uninstall problems</summary><ul><li>Cancelled: nothing is removed if you answer n or just press Enter.</li><li>Not a Runcom installation: check the path. The script refuses to remove an unrecognized folder.</li><li>Shortcut missing: use the download commands. You do not need to reinstall first.</li><li>Extra files kept: your files were intentionally preserved. Inspect the folder before removing anything else.</li><li>Permission denied / Access denied: close the app and check that you are using the account that installed it.</li><li>Linked-directory error: a linked installation may need manual handling. The uninstaller does not choose another folder for you.</li></ul><p><a href="help.html#uninstall-guide">Read the full uninstall guide</a></p></details>
-<noscript><p>Without JavaScript: choose the script manually. <a href="uninstall.sh" download="runcom-uninstall.sh">Linux/macOS</a> · <a href="uninstall.ps1" download="runcom-uninstall.ps1">Windows</a></p><pre>bash runcom-uninstall.sh
-powershell -ExecutionPolicy Bypass -File .\runcom-uninstall.ps1</pre></noscript></section></main><footer>Runcom · A focused tool for your scripts. · <a href="https://github.com/tvrdprijatelj/runcom">Source and documentation</a></footer></body></html>
+powershell -ExecutionPolicy Bypass -File .\runcom-install.ps1</pre>
+        </noscript>
+        <details>
+          <summary>Manual launch and troubleshooting</summary>
+          <p>You can also download the source and run python3 runcom.py (Windows: py runcom.py). Install Tkinter through your system, not pip. Use the terminal (F6) for scripts that ask for input or passwords.</p>
+          <a href="https://github.com/tvrdprijatelj/runcom/archive/refs/heads/main.zip">Download current source (main)</a>
+        </details>
+      </section>
+      <section class="panel" id="uninstall">
+        <div class="eyebrow">Uninstallation</div>
+        <h2>Uninstall Runcom — step by step</h2>
+        <p>Choose your Linux distribution or operating system. The app, its Python environment and associated shortcuts are removed. Your own scripts, including ~/skript and extra files in the installation folder, are preserved.</p>
+        <label for="uninstall-os">Distribution / operating system</label>
+        <select id="uninstall-os">
+          <option value="arch">Arch Linux / EndeavourOS / Manjaro</option>
+          <option value="ubuntu">Ubuntu</option>
+          <option value="debian">Debian</option>
+          <option value="mint">Linux Mint</option>
+          <option value="fedora">Fedora</option>
+          <option value="opensuse">openSUSE</option>
+          <option value="alpine">Alpine Linux</option>
+          <option value="linux" selected>Other Linux / not sure</option>
+          <option value="mac">macOS</option>
+          <option value="windows">Windows</option>
+        </select>
+        <p id="uninstall-distro"></p>
+        <h3>Option 1: use the shortcut</h3>
+        <ol>
+          <li>Save your work. Close Runcom and any scripts that are still running.</li>
+          <li id="uninstall-menu"></li>
+          <li>Read the installation path shown in the terminal. Confirm with y or yes and press Enter. Answer n to cancel.</li>
+        </ol>
+        <p>This option is included with new installations from main. If the shortcut is missing, use the terminal method below directly.</p>
+        <h3>Option 2: download the uninstaller</h3>
+        <ol>
+          <li id="uninstall-terminal"></li>
+          <li>Download the script with the button if you want to inspect it before running it.<div class="actions">
+              <a id="uninstaller" class="button" href="uninstall.sh" download="runcom-uninstall.sh">Download uninstaller</a>
+            </div>
+          </li>
+          <li>Copy the commands below into your terminal. The first line fetches a fresh file; the second starts the uninstaller. Clicking Copy alone does not uninstall anything.<pre id="uninstall-command">curl -fL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/uninstall.sh -o runcom-uninstall.sh
+bash runcom-uninstall.sh</pre>
+            <button id="uninstall-copy" type="button">Copy uninstall commands</button>
+          </li>
+          <li>Check the installation folder and confirm in the terminal with y or yes. A normal per-user installation usually needs no sudo or administrator rights for removal.</li>
+        </ol>
+        <p id="uninstall-status" role="status" aria-live="polite"></p>
+        <details>
+          <summary>If Python, Bash or curl is missing</summary>
+          <p id="uninstall-tools-note"></p>
+          <pre id="uninstall-tools"></pre>
+          <p>Install these tools only if they are missing, then retry the uninstall commands. The Linux uninstaller needs no pip packages or Tkinter.</p>
+        </details>
+        <details>
+          <summary>I chose a custom installation folder</summary>
+          <p>The installed menu shortcut remembers the folder. For manual removal, specify the same folder used during installation. Replace the example path below with your actual path.</p>
+          <pre id="uninstall-custom">RUNCOM_INSTALL_DIR="/path/to/runcom" bash runcom-uninstall.sh</pre>
+          <p>Linux/macOS default: ~/.local/share/runcom, or $XDG_DATA_HOME/runcom when configured. Windows default: %LOCALAPPDATA%\Runcom.</p>
+        </details>
+        <details>
+          <summary>How do I know it worked?</summary>
+          <p>The terminal reports that Runcom was uninstalled. App files and associated shortcuts should be gone. Folders containing your own files are kept, with a message explaining this. Search the application menu again; log out and back in if your desktop still shows an old entry.</p>
+        </details>
+        <details>
+          <summary>Common uninstall problems</summary>
+          <ul>
+            <li>Cancelled: nothing is removed if you answer n or just press Enter.</li>
+            <li>Not a Runcom installation: check the path. The script refuses to remove an unrecognized folder.</li>
+            <li>Shortcut missing: use the download commands. You do not need to reinstall first.</li>
+            <li>Extra files kept: your files were intentionally preserved. Inspect the folder before removing anything else.</li>
+            <li>Permission denied / Access denied: close the app and check that you are using the account that installed it.</li>
+            <li>Linked-directory error: a linked installation may need manual handling. The uninstaller does not choose another folder for you.</li>
+          </ul>
+          <p>
+            <a href="help.html#uninstall-guide">Read the full uninstall guide</a>
+          </p>
+        </details>
+        <noscript>
+          <p>Without JavaScript: choose the script manually. <a href="uninstall.sh" download="runcom-uninstall.sh">Linux/macOS</a> · <a href="uninstall.ps1" download="runcom-uninstall.ps1">Windows</a>
+          </p>
+          <pre>bash runcom-uninstall.sh
+powershell -ExecutionPolicy Bypass -File .\runcom-uninstall.ps1</pre>
+        </noscript>
+      </section>
+    </main>
+    <footer>Runcom · A focused tool for your scripts. · <a href="https://github.com/tvrdprijatelj/runcom">Source and documentation</a>
+    </footer>
+  </body>
+</html>

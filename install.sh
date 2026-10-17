@@ -75,8 +75,14 @@ if [ -f "$SOURCE/requirements.txt" ]; then
   "$INSTALL_DIR/venv/bin/python" -m pip install -r "$SOURCE/requirements.txt"
 fi
 "$PYTHON" - "$INSTALL_DIR" "$SOURCE" "$APP_LANGUAGE" <<'PY'
-import os, pathlib, shlex, sys, tempfile
+import os, pathlib, shlex, stat, sys, tempfile
 folder = pathlib.Path(sys.argv[1]).resolve()
+source = pathlib.Path(sys.argv[2])
+language = sys.argv[3]
+
+if language == 'en' and b'TRANSLATIONS' not in (source / 'runcom.py').read_bytes():
+    raise SystemExit('This version does not support English. Retry with --ref main.')
+
 def replace_file(path, data, mode):
     fd, temporary = tempfile.mkstemp(prefix='.runcom-', dir=str(path.parent))
     try:
@@ -89,24 +95,51 @@ def replace_file(path, data, mode):
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
-if sys.argv[3] == 'en' and b'TRANSLATIONS' not in (pathlib.Path(sys.argv[2]) / 'runcom.py').read_bytes():
-    raise SystemExit('This version does not support English. Retry with --ref main.')
-if sys.argv[3]:
-    replace_file(folder / 'runcom-language', sys.argv[3].encode(), 0o600)
-replace_file(folder / 'runcom.py', (pathlib.Path(sys.argv[2]) / 'runcom.py').read_bytes(), 0o600)
-replace_file(folder / 'runcom-revision', pathlib.Path(sys.argv[2]).name.rsplit('-', 1)[-1].encode(), 0o600)
+
+files = []
+if language:
+    files.append((folder / 'runcom-language', language.encode(), 0o600))
+files.extend([
+    (folder / 'runcom.py', (source / 'runcom.py').read_bytes(), 0o600),
+    (folder / 'runcom-revision', source.name.rsplit('-', 1)[-1].encode(), 0o600),
+])
 for name in ('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico', 'uninstall.sh', 'uninstall.ps1'):
-    asset = pathlib.Path(sys.argv[2]) / name
+    asset = source / name
     if asset.is_file():
-        replace_file(folder / name, asset.read_bytes(), 0o600)
+        files.append((folder / name, asset.read_bytes(), 0o600))
 launcher = folder / 'runcom'
 launcher_text = ('#!/bin/sh\nexec ' + shlex.quote(str(folder / 'venv/bin/python')) + ' ' + shlex.quote(str(folder / 'runcom.py')) + ' "$@"\n')
-replace_file(launcher, launcher_text.encode(), 0o700)
+files.append((launcher, launcher_text.encode(), 0o700))
 uninstall_launcher = folder / ('Uninstall Runcom.command' if sys.platform == 'darwin' else 'runcom-uninstall')
-if (folder / 'uninstall.sh').is_file():
+if (source / 'uninstall.sh').is_file():
     command = ('#!/bin/sh\nexport RUNCOM_INSTALL_DIR=' + shlex.quote(str(folder)) + '\n'
                'exec bash ' + shlex.quote(str(folder / 'uninstall.sh')) + ' "$@"\n')
-    replace_file(uninstall_launcher, command.encode(), 0o700)
+    files.append((uninstall_launcher, command.encode(), 0o700))
+
+# Replace the complete application as one transaction. If any target cannot be
+# written, restore every file already changed before reporting the failure.
+backups = {}
+applied = []
+try:
+    for path, data, mode in files:
+        existed = path.is_file() or path.is_symlink()
+        backups[path] = (existed, path.read_bytes() if existed else None,
+                         stat.S_IMODE(path.stat().st_mode) if existed else None)
+        replace_file(path, data, mode)
+        applied.append(path)
+except BaseException:
+    for path in reversed(applied):
+        existed, data, mode = backups[path]
+        if existed:
+            replace_file(path, data, mode)
+        else:
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+    raise
+
+if (source / 'uninstall.sh').is_file():
     print('Uninstall with: ' + shlex.quote(str(uninstall_launcher)))
 if sys.platform.startswith('linux'):
     # Desktop Entry: escape the string layer, then the Exec argument layer.

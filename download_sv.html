@@ -1,18 +1,179 @@
-<!doctype html><html lang="sv"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Skapa, redigera och kör skript i ett samlat gränssnitt. Se resultatet direkt eller öppna en terminal för interaktiva kommandon."><title>Runcom — Skriv och kör skript</title><link rel="stylesheet" href="style.css?v=14822a7832"><script defer src="download.js?v=ff51a2bd5a"></script></head><body>
-<nav aria-label="Huvudmeny"><a class="brand" href="index.html">runcom<span>_</span></a><div><a class="button secondary nav-help" href="help.html" lang="sv">Hjälp</a><a href="download_en.html" lang="en">English</a><a href="https://github.com/tvrdprijatelj/runcom">GitHub ↗</a></div></nav>
-<main><section class="hero"><div><div class="eyebrow">Linux · macOS · Windows</div><h1>Dina skript. Ett arbetsflöde.</h1><p>Skapa, redigera och kör skript i ett samlat gränssnitt. Se resultatet direkt eller öppna en terminal för interaktiva kommandon.</p><div class="actions"><a class="button" href="#install">Kom igång ↓</a><a class="button secondary" href="https://github.com/tvrdprijatelj/runcom/releases/latest">Senaste release</a></div><p>Python 3.8+ · Tkinter · Öppen källkod</p></div><div class="preview" aria-label="Exempel på ett skript och dess resultat"><div class="windowbar">runcom / hello.sh</div><div class="code">#!/usr/bin/env bash<br><b>echo</b> "Hello from Runcom!"</div><div class="result">› Hello from Runcom!<br>✓ Avslutades med kod 0</div></div></section>
-<div class="grid"><section class="panel"><h2>01 · Skriv</h2><p>Skapa ett skript från en mall. Sök bland dina filer och spara med Ctrl+S.</p></section><section class="panel"><h2>02 · Kör</h2><p>F5 kör i appen. F6 öppnar en terminal för skript som behöver inmatning.</p></section><section class="panel"><h2>03 · Följ resultatet</h2><p>Se utdata och slutkod. Stoppa en pågående körning med en knapp.</p></section></div>
-<section class="panel" id="install"><div class="eyebrow">Installation</div><h2>Välj ditt operativsystem</h2><p>Senaste publicerade release är förvald. Du kan även välja aktuella rättningar på main. Programmet sparas i din användarmapp. Kör installationen igen för att uppdatera.</p><label for="os">Operativsystem</label> <select id="os"><option value="arch">Arch Linux</option><option value="ubuntu">Ubuntu / Debian</option><option value="fedora">Fedora</option><option value="mac">macOS</option><option value="windows">Windows</option><option value="linux">Övriga Linux</option></select>
-<p><label for="version">Version</label> <select id="version"><option value="release" selected>Senaste publicerade release</option><option value="main">Aktuella rättningar (main)</option></select></p><ol><li>Installera förutsättningarna om de saknas.<pre id="prerequisites"></pre></li><li>Ladda ner installationsskriptet och granska det.<div class="actions"><a id="installer" class="button" href="install_sv.sh" download="runcom-install.sh">Ladda ner installationsskript</a></div></li><li>Hämta ett nytt installationsskript och kör det från terminalen.<pre id="command"></pre><button id="copy" type="button">Kopiera kommando</button></li></ol><p id="status" role="status" aria-live="polite"></p><p id="launch"></p><noscript><p>Linux/macOS: <a href="install_sv.sh" download="runcom-install.sh">install.sh</a> · Windows: <a href="install_sv.ps1" download="runcom-install.ps1">install.ps1</a></p><pre>bash runcom-install.sh
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="description" content="Skapa, redigera och kör skript i ett samlat gränssnitt. Se resultatet direkt eller öppna en terminal för interaktiva kommandon.">
+    <title>Runcom — Skriv och kör skript</title>
+    <link rel="stylesheet" href="style.css?v=14822a7832">
+    <script defer src="download.js?v=ff51a2bd5a"></script>
+  </head>
+  <body>
+    <nav aria-label="Huvudmeny">
+      <a class="brand" href="index.html">runcom<span>_</span>
+      </a>
+      <div>
+        <a class="button secondary nav-help" href="help.html" lang="sv">Hjälp</a>
+        <a href="download_en.html" lang="en">English</a>
+        <a href="https://github.com/tvrdprijatelj/runcom">GitHub ↗</a>
+      </div>
+    </nav>
+    <main>
+      <section class="hero">
+        <div>
+          <div class="eyebrow">Linux · macOS · Windows</div>
+          <h1>Dina skript. Ett arbetsflöde.</h1>
+          <p>Skapa, redigera och kör skript i ett samlat gränssnitt. Se resultatet direkt eller öppna en terminal för interaktiva kommandon.</p>
+          <div class="actions">
+            <a class="button" href="#install">Kom igång ↓</a>
+            <a class="button secondary" href="https://github.com/tvrdprijatelj/runcom/releases/latest">Senaste release</a>
+          </div>
+          <p>Python 3.8+ · Tkinter · Öppen källkod</p>
+        </div>
+        <div class="preview" aria-label="Exempel på ett skript och dess resultat">
+          <div class="windowbar">runcom / hello.sh</div>
+          <div class="code">#!/usr/bin/env bash<br><b>echo</b> "Hello from Runcom!"</div>
+          <div class="result">› Hello from Runcom!<br>✓ Avslutades med kod 0</div>
+        </div>
+      </section>
+      <div class="grid">
+        <section class="panel">
+          <h2>01 · Skriv</h2>
+          <p>Skapa ett skript från en mall. Sök bland dina filer och spara med Ctrl+S.</p>
+        </section>
+        <section class="panel">
+          <h2>02 · Kör</h2>
+          <p>F5 kör i appen. F6 öppnar en terminal för skript som behöver inmatning.</p>
+        </section>
+        <section class="panel">
+          <h2>03 · Följ resultatet</h2>
+          <p>Se utdata och slutkod. Stoppa en pågående körning med en knapp.</p>
+        </section>
+      </div>
+      <section class="panel" id="install">
+        <div class="eyebrow">Installation</div>
+        <h2>Välj ditt operativsystem</h2>
+        <p>Senaste publicerade release är förvald. Du kan även välja aktuella rättningar på main. Programmet sparas i din användarmapp. Kör installationen igen för att uppdatera.</p>
+        <label for="os">Operativsystem</label>
+        <select id="os">
+          <option value="arch">Arch Linux</option>
+          <option value="ubuntu">Ubuntu / Debian</option>
+          <option value="fedora">Fedora</option>
+          <option value="mac">macOS</option>
+          <option value="windows">Windows</option>
+          <option value="linux">Övriga Linux</option>
+        </select>
+        <p>
+          <label for="version">Version</label>
+          <select id="version">
+            <option value="release" selected>Senaste publicerade release</option>
+            <option value="main">Aktuella rättningar (main)</option>
+          </select>
+        </p>
+        <ol>
+          <li>Installera förutsättningarna om de saknas.<pre id="prerequisites"></pre>
+          </li>
+          <li>Ladda ner installationsskriptet och granska det.<div class="actions">
+              <a id="installer" class="button" href="install_sv.sh" download="runcom-install.sh">Ladda ner installationsskript</a>
+            </div>
+          </li>
+          <li>Hämta ett nytt installationsskript och kör det från terminalen.<pre id="command"></pre>
+            <button id="copy" type="button">Kopiera kommando</button>
+          </li>
+        </ol>
+        <p id="status" role="status" aria-live="polite"></p>
+        <p id="launch"></p>
+        <noscript>
+          <p>Linux/macOS: <a href="install_sv.sh" download="runcom-install.sh">install.sh</a> · Windows: <a href="install_sv.ps1" download="runcom-install.ps1">install.ps1</a>
+          </p>
+          <pre>bash runcom-install.sh
 # Windows PowerShell:
-powershell -ExecutionPolicy Bypass -File .\runcom-install.ps1</pre></noscript>
-<details><summary>Manuell start och felsökning</summary><p>Du kan även hämta källkoden och köra python3 runcom.py (Windows: py runcom.py). Tkinter installeras via systemet, inte pip. Skript som frågar efter text eller lösenord körs bäst i terminalen (F6).</p><a href="https://github.com/tvrdprijatelj/runcom/archive/refs/heads/main.zip">Ladda ner aktuell källkod (main)</a></details></section><section class="panel" id="uninstall"><div class="eyebrow">Avinstallation</div><h2>Avinstallera Runcom — steg för steg</h2><p>Välj din Linuxdistribution eller ditt operativsystem. Appen, dess Python-miljö och tillhörande genvägar tas bort. Dina egna skript, inklusive ~/skript och extra filer i installationsmappen, bevaras.</p><label for="uninstall-os">Distribution / operativsystem</label> <select id="uninstall-os"><option value="arch">Arch Linux / EndeavourOS / Manjaro</option><option value="ubuntu">Ubuntu</option><option value="debian">Debian</option><option value="mint">Linux Mint</option><option value="fedora">Fedora</option><option value="opensuse">openSUSE</option><option value="alpine">Alpine Linux</option><option value="linux" selected>Annan Linux / osäker</option><option value="mac">macOS</option><option value="windows">Windows</option></select><p id="uninstall-distro"></p>
-<h3>Alternativ 1: använd genvägen</h3><ol><li>Spara ditt arbete. Stäng Runcom och skript som fortfarande körs.</li><li id="uninstall-menu"></li><li>Läs sökvägen som visas i terminalen. Bekräfta med y eller ja och tryck Enter. Svara n om du vill avbryta.</li></ol><p>Alternativet följer med nya installationer från main. Saknas genvägen kan du använda terminalmetoden nedan direkt.</p>
-<h3>Alternativ 2: hämta avinstalleraren</h3><ol><li id="uninstall-terminal"></li><li>Ladda ner skriptet med knappen om du vill läsa det före körning.<div class="actions"><a id="uninstaller" class="button" href="uninstall.sh" download="runcom-uninstall.sh">Ladda ner avinstallationsskript</a></div></li><li>Kopiera kommandona nedan till terminalen. Första raden hämtar en ny fil; andra raden startar avinstallationen. Ingen avinstallation sker bara för att du klickar Kopiera.<pre id="uninstall-command">curl -fL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/uninstall.sh -o runcom-uninstall.sh
-bash runcom-uninstall.sh</pre><button id="uninstall-copy" type="button">Kopiera avinstallationskommandon</button></li><li>Kontrollera installationsmappen och bekräfta i terminalen med y eller ja. Avinstalleraren behöver normalt inte sudo eller administratörsrättigheter för en vanlig användarinstallation.</li></ol><p id="uninstall-status" role="status" aria-live="polite"></p>
-<details><summary>Om Python, Bash eller curl saknas</summary><p id="uninstall-tools-note"></p><pre id="uninstall-tools"></pre><p>Kör bara installationskommandot för verktygen om de saknas. Försök sedan med avinstallationskommandona igen. Inga Python-paket via pip eller Tkinter behövs för Linux-avinstalleraren.</p></details>
-<details><summary>Jag valde en egen installationsmapp</summary><p>Menygenvägen som följer med installationen kommer ihåg mappen. Vid manuell avinstallation anger du samma mapp som när du installerade. Ersätt exempelvägen nedan med din verkliga sökväg.</p><pre id="uninstall-custom">RUNCOM_INSTALL_DIR="/path/to/runcom" bash runcom-uninstall.sh</pre><p>Standard på Linux/macOS: ~/.local/share/runcom, eller $XDG_DATA_HOME/runcom om du har anpassat XDG_DATA_HOME. Standard på Windows: %LOCALAPPDATA%\Runcom.</p></details>
-<details><summary>Hur vet jag att det lyckades?</summary><p>Terminalen skriver att Runcom har avinstallerats. Appfilerna och genvägarna ska vara borta. Finns egna filer kvar lämnas deras mapp kvar med ett meddelande om det. Sök efter Runcom i programmenyn igen; logga ut och in om skrivbordsmiljön fortfarande visar en gammal genväg.</p></details>
-<details><summary>Vanliga problem vid avinstallation</summary><ul><li>Avbrutet: inget tas bort när du svarar n eller bara trycker Enter.</li><li>Not a Runcom installation: kontrollera sökvägen. Skriptet vägrar ta bort en okänd mapp.</li><li>Genvägen saknas: använd nedladdningskommandona. Du behöver inte installera om appen först.</li><li>Extra files kept: dina egna filer finns kvar avsiktligt. Kontrollera mappen innan du själv tar bort något mer.</li><li>Permission denied / Access denied: stäng appen och kontrollera att du använder kontot som installerade den.</li><li>Fel med symbolisk länk: en länkad installationsmapp kan behöva hanteras manuellt. Avinstalleraren väljer inte en annan mapp åt dig.</li></ul><p><a href="help.html#uninstall-guide">Läs hela avinstallationsguiden</a></p></details>
-<noscript><p>Utan JavaScript: välj skript manuellt. <a href="uninstall.sh" download="runcom-uninstall.sh">Linux/macOS</a> · <a href="uninstall.ps1" download="runcom-uninstall.ps1">Windows</a></p><pre>bash runcom-uninstall.sh
-powershell -ExecutionPolicy Bypass -File .\runcom-uninstall.ps1</pre></noscript></section></main><footer>Runcom · Ett enkelt verktyg för dina skript. · <a href="https://github.com/tvrdprijatelj/runcom">Källkod och dokumentation</a></footer></body></html>
+powershell -ExecutionPolicy Bypass -File .\runcom-install.ps1</pre>
+        </noscript>
+        <details>
+          <summary>Manuell start och felsökning</summary>
+          <p>Du kan även hämta källkoden och köra python3 runcom.py (Windows: py runcom.py). Tkinter installeras via systemet, inte pip. Skript som frågar efter text eller lösenord körs bäst i terminalen (F6).</p>
+          <a href="https://github.com/tvrdprijatelj/runcom/archive/refs/heads/main.zip">Ladda ner aktuell källkod (main)</a>
+        </details>
+      </section>
+      <section class="panel" id="uninstall">
+        <div class="eyebrow">Avinstallation</div>
+        <h2>Avinstallera Runcom — steg för steg</h2>
+        <p>Välj din Linuxdistribution eller ditt operativsystem. Appen, dess Python-miljö och tillhörande genvägar tas bort. Dina egna skript, inklusive ~/skript och extra filer i installationsmappen, bevaras.</p>
+        <label for="uninstall-os">Distribution / operativsystem</label>
+        <select id="uninstall-os">
+          <option value="arch">Arch Linux / EndeavourOS / Manjaro</option>
+          <option value="ubuntu">Ubuntu</option>
+          <option value="debian">Debian</option>
+          <option value="mint">Linux Mint</option>
+          <option value="fedora">Fedora</option>
+          <option value="opensuse">openSUSE</option>
+          <option value="alpine">Alpine Linux</option>
+          <option value="linux" selected>Annan Linux / osäker</option>
+          <option value="mac">macOS</option>
+          <option value="windows">Windows</option>
+        </select>
+        <p id="uninstall-distro"></p>
+        <h3>Alternativ 1: använd genvägen</h3>
+        <ol>
+          <li>Spara ditt arbete. Stäng Runcom och skript som fortfarande körs.</li>
+          <li id="uninstall-menu"></li>
+          <li>Läs sökvägen som visas i terminalen. Bekräfta med y eller ja och tryck Enter. Svara n om du vill avbryta.</li>
+        </ol>
+        <p>Alternativet följer med nya installationer från main. Saknas genvägen kan du använda terminalmetoden nedan direkt.</p>
+        <h3>Alternativ 2: hämta avinstalleraren</h3>
+        <ol>
+          <li id="uninstall-terminal"></li>
+          <li>Ladda ner skriptet med knappen om du vill läsa det före körning.<div class="actions">
+              <a id="uninstaller" class="button" href="uninstall.sh" download="runcom-uninstall.sh">Ladda ner avinstallationsskript</a>
+            </div>
+          </li>
+          <li>Kopiera kommandona nedan till terminalen. Första raden hämtar en ny fil; andra raden startar avinstallationen. Ingen avinstallation sker bara för att du klickar Kopiera.<pre id="uninstall-command">curl -fL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/uninstall.sh -o runcom-uninstall.sh
+bash runcom-uninstall.sh</pre>
+            <button id="uninstall-copy" type="button">Kopiera avinstallationskommandon</button>
+          </li>
+          <li>Kontrollera installationsmappen och bekräfta i terminalen med y eller ja. Avinstalleraren behöver normalt inte sudo eller administratörsrättigheter för en vanlig användarinstallation.</li>
+        </ol>
+        <p id="uninstall-status" role="status" aria-live="polite"></p>
+        <details>
+          <summary>Om Python, Bash eller curl saknas</summary>
+          <p id="uninstall-tools-note"></p>
+          <pre id="uninstall-tools"></pre>
+          <p>Kör bara installationskommandot för verktygen om de saknas. Försök sedan med avinstallationskommandona igen. Inga Python-paket via pip eller Tkinter behövs för Linux-avinstalleraren.</p>
+        </details>
+        <details>
+          <summary>Jag valde en egen installationsmapp</summary>
+          <p>Menygenvägen som följer med installationen kommer ihåg mappen. Vid manuell avinstallation anger du samma mapp som när du installerade. Ersätt exempelvägen nedan med din verkliga sökväg.</p>
+          <pre id="uninstall-custom">RUNCOM_INSTALL_DIR="/path/to/runcom" bash runcom-uninstall.sh</pre>
+          <p>Standard på Linux/macOS: ~/.local/share/runcom, eller $XDG_DATA_HOME/runcom om du har anpassat XDG_DATA_HOME. Standard på Windows: %LOCALAPPDATA%\Runcom.</p>
+        </details>
+        <details>
+          <summary>Hur vet jag att det lyckades?</summary>
+          <p>Terminalen skriver att Runcom har avinstallerats. Appfilerna och genvägarna ska vara borta. Finns egna filer kvar lämnas deras mapp kvar med ett meddelande om det. Sök efter Runcom i programmenyn igen; logga ut och in om skrivbordsmiljön fortfarande visar en gammal genväg.</p>
+        </details>
+        <details>
+          <summary>Vanliga problem vid avinstallation</summary>
+          <ul>
+            <li>Avbrutet: inget tas bort när du svarar n eller bara trycker Enter.</li>
+            <li>Not a Runcom installation: kontrollera sökvägen. Skriptet vägrar ta bort en okänd mapp.</li>
+            <li>Genvägen saknas: använd nedladdningskommandona. Du behöver inte installera om appen först.</li>
+            <li>Extra files kept: dina egna filer finns kvar avsiktligt. Kontrollera mappen innan du själv tar bort något mer.</li>
+            <li>Permission denied / Access denied: stäng appen och kontrollera att du använder kontot som installerade den.</li>
+            <li>Fel med symbolisk länk: en länkad installationsmapp kan behöva hanteras manuellt. Avinstalleraren väljer inte en annan mapp åt dig.</li>
+          </ul>
+          <p>
+            <a href="help.html#uninstall-guide">Läs hela avinstallationsguiden</a>
+          </p>
+        </details>
+        <noscript>
+          <p>Utan JavaScript: välj skript manuellt. <a href="uninstall.sh" download="runcom-uninstall.sh">Linux/macOS</a> · <a href="uninstall.ps1" download="runcom-uninstall.ps1">Windows</a>
+          </p>
+          <pre>bash runcom-uninstall.sh
+powershell -ExecutionPolicy Bypass -File .\runcom-uninstall.ps1</pre>
+        </noscript>
+      </section>
+    </main>
+    <footer>Runcom · Ett enkelt verktyg för dina skript. · <a href="https://github.com/tvrdprijatelj/runcom">Källkod och dokumentation</a>
+    </footer>
+  </body>
+</html>

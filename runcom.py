@@ -166,7 +166,8 @@ def install_release(folder, release):
     # Fetch all files before touching the installation; keep backups for rollback.
     revision = urllib.parse.quote(release["revision"], safe="")
     files = {}
-    for name in ("runcom.py", "help.html", "help.css", "style.css", "runcom.png", "runcom.ico"):
+    for name in ("runcom.py", "help.html", "help.css", "style.css", "runcom.png", "runcom.ico",
+                 "uninstall.sh", "uninstall.ps1"):
         url = "https://raw.githubusercontent.com/tvrdprijatelj/runcom/" + revision + "/" + name
         request = urllib.request.Request(url, headers={"User-Agent": "Runcom-updater"})
         try:

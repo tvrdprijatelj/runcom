@@ -28,7 +28,8 @@ const server = http.createServer((request,response)=>{
         await page.goto(`${base}/download_${lang}.html`);
         await page.screenshot({path:path.join(root,`.test-artifacts/${lang}-${width}.png`),fullPage:true});
         assert.equal(await page.locator('html').getAttribute('lang'),lang);
-        assert.equal(await page.locator('#version').inputValue(),'main');
+        assert.equal(await page.locator('#version').inputValue(),'release');
+        assert.ok(!(await page.locator('#command').textContent()).includes('ref main'));
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         await page.locator('#os').selectOption('windows');
         await page.locator('#version').selectOption('main');
@@ -37,7 +38,9 @@ const server = http.createServer((request,response)=>{
         await page.waitForFunction(()=>/kopierades|copied/.test(document.getElementById('status').textContent));
         const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#installer').click()]);
         assert.equal(download.suggestedFilename(),'runcom-install.ps1');
-        assert.ok(fs.readFileSync(await download.path(),'utf8').includes(`-Language ${lang}`));
+        const mainInstaller=fs.readFileSync(await download.path(),'utf8');
+        assert.ok(mainInstaller.includes(`-Language ${lang}`));
+        assert.ok(mainInstaller.includes('-Ref main'));
         await page.locator('#os').selectOption('arch');
         assert.match(await page.locator('#command').textContent(),/--ref main/);
         await page.locator('#version').selectOption('release');

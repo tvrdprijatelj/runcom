@@ -20,7 +20,14 @@ const script = fs.readFileSync(path.join(__dirname, '../download.js'), 'utf8');
         for (const version of ['main','release']) {
           elements.os.value=os; elements.version.value=version; elements.os.events.change();
           assert.ok(elements.prerequisites.textContent.length>10);
-          assert.equal(elements.installer.href,`install_${lang}.${os==='windows'?'ps1':'sh'}`);
+          if(version === 'main') {
+            assert.match(elements.installer.href,/^data:text\/plain;charset=utf-8,/);
+            const installer = decodeURIComponent(elements.installer.href.split(',',2)[1]);
+            assert.ok(installer.includes(os==='windows'?'-Ref main':'--ref main'));
+            assert.ok(installer.includes(os==='windows'?`-Language ${lang}`:`--lang ${lang}`));
+          } else {
+            assert.equal(elements.installer.href,`install_${lang}.${os==='windows'?'ps1':'sh'}`);
+          }
           const command = elements.command.textContent;
           assert.ok(command.includes(os==='windows'?`-Language ${lang}`:`--lang ${lang}`));
           assert.match(command,/raw\.githubusercontent\.com\/tvrdprijatelj\/runcom\/main\/install\./);

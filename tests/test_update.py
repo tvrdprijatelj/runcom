@@ -38,3 +38,5 @@ class UpdateTests(unittest.TestCase):
             self.assertEqual((folder / 'runcom.py').read_text(), '# updated')
             self.assertEqual((folder / 'runcom-revision').read_text(), 'abc')
             self.assertEqual((folder / 'runcom-language').read_text(), 'en')
+            self.assertEqual((folder / 'uninstall.sh').read_text(), '# updated')
+            self.assertEqual((folder / 'uninstall.ps1').read_text(), '# updated')

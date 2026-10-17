@@ -78,31 +78,62 @@ compile(app.read_bytes(), str(app), 'exec')
         throw 'This version does not support English. Retry with -Ref main.'
     }
     $appPath = Join-Path $InstallDir 'runcom.py'
-    $copy = @'
-import os, pathlib, sys, tempfile
-source, target = map(pathlib.Path, sys.argv[1:])
-fd, temporary = tempfile.mkstemp(prefix='.runcom-', dir=str(target.parent))
-try:
-    with os.fdopen(fd, 'wb') as stream:
-        stream.write(source.read_bytes())
-        stream.flush()
-        os.fsync(stream.fileno())
-    os.replace(temporary, target)
-finally:
-    if os.path.exists(temporary):
-        os.unlink(temporary)
-'@
-    Invoke-Python -Exe $py -Arguments @('-c', $copy, (Join-Path $folder 'runcom.py'), $appPath)
+    $stage = Join-Path $tmp 'stage'
+    New-Item -ItemType Directory -Path $stage | Out-Null
+    Copy-Item (Join-Path $folder 'runcom.py') (Join-Path $stage 'runcom.py')
     foreach ($asset in @('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico', 'uninstall.ps1', 'uninstall.sh')) {
         $assetSource = Join-Path $folder $asset
         if (Test-Path $assetSource -PathType Leaf) {
-            Invoke-Python -Exe $py -Arguments @('-c', $copy, $assetSource, (Join-Path $InstallDir $asset))
+            Copy-Item $assetSource (Join-Path $stage $asset)
         }
     }
-    [IO.File]::WriteAllText((Join-Path $InstallDir 'runcom-revision'), ((Split-Path $folder -Leaf) -split '-')[-1], (New-Object Text.UTF8Encoding $false))
+    [IO.File]::WriteAllText((Join-Path $stage 'runcom-revision'), ((Split-Path $folder -Leaf) -split '-')[-1], (New-Object Text.UTF8Encoding $false))
     if ($Language) {
-        [IO.File]::WriteAllText((Join-Path $InstallDir 'runcom-language'), $Language, (New-Object Text.UTF8Encoding $false))
+        [IO.File]::WriteAllText((Join-Path $stage 'runcom-language'), $Language, (New-Object Text.UTF8Encoding $false))
     }
+    $installFiles = @'
+import os, pathlib, sys, tempfile
+source, folder = map(pathlib.Path, sys.argv[1:])
+order = ('runcom-language', 'runcom.py', 'runcom-revision', 'help.html', 'help.css',
+         'style.css', 'runcom.png', 'runcom.ico', 'uninstall.ps1', 'uninstall.sh')
+
+def replace(path, data):
+    fd, temporary = tempfile.mkstemp(prefix='.runcom-', dir=str(path.parent))
+    try:
+        with os.fdopen(fd, 'wb') as stream:
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+backups = {}
+applied = []
+try:
+    for name in order:
+        item = source / name
+        if not item.is_file():
+            continue
+        target = folder / name
+        existed = target.is_file() or target.is_symlink()
+        backups[target] = (existed, target.read_bytes() if existed else None)
+        replace(target, item.read_bytes())
+        applied.append(target)
+except BaseException:
+    for target in reversed(applied):
+        existed, data = backups[target]
+        if existed:
+            replace(target, data)
+        else:
+            try:
+                target.unlink()
+            except FileNotFoundError:
+                pass
+    raise
+'@
+    Invoke-Python -Exe $py -Arguments @('-c', $installFiles, $stage, $InstallDir)
     if (-not $NoShortcut) {
         try {
             $shell = New-Object -ComObject WScript.Shell

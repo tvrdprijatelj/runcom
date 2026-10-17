@@ -12,6 +12,13 @@ const prerequisites = {
   windows:text('Installera Python från https://www.python.org/downloads/windows/ — välj Tcl/Tk och Python launcher.', 'Install Python from https://www.python.org/downloads/windows/ — include Tcl/Tk and Python launcher.'),
   linux:text('Installera Python 3.8+, Tkinter, venv och curl via din pakethanterare.', 'Install Python 3.8+, Tkinter, venv and curl using your package manager.')
 };
+function mainInstaller(win){
+  const lang = sv ? 'sv' : 'en';
+  if(win){
+    return `# Download the installer, then install the current main branch.\n$ErrorActionPreference = 'Stop'\n$runcomInstallerTemp = Join-Path ([IO.Path]::GetTempPath()) ('runcom-' + [guid]::NewGuid() + '.ps1')\ntry {\n    Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1' -OutFile $runcomInstallerTemp\n    & $runcomInstallerTemp -Ref main @args -Language ${lang}\n} finally {\n    Remove-Item $runcomInstallerTemp -ErrorAction SilentlyContinue\n}\n`;
+  }
+  return `#!/usr/bin/env bash\n# Download the installer, then install the current main branch.\nset -euo pipefail\nRUNCOM_INSTALLER_TEMP="$(mktemp -d)"\ntrap 'rm -rf "$RUNCOM_INSTALLER_TEMP"' EXIT\ncurl -fL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o "$RUNCOM_INSTALLER_TEMP/install.sh"\nbash "$RUNCOM_INSTALLER_TEMP/install.sh" --ref main "$@" --lang ${lang}\n`;
+}
 function updateOS(){
   const win = os.value === 'windows';
   const main = version.value === 'main';
@@ -21,7 +28,9 @@ function updateOS(){
     ? `Invoke-WebRequest -UseBasicParsing '${base}install.ps1' -OutFile runcom-install.ps1\npowershell -ExecutionPolicy Bypass -File .\\runcom-install.ps1${main ? ' -Ref main' : ''} -Language ${sv ? 'sv' : 'en'}`
     : `curl -fL '${base}install.sh' -o runcom-install.sh\nbash runcom-install.sh${main ? ' --ref main' : ''} --lang ${sv ? 'sv' : 'en'}`;
   const link = document.getElementById('installer');
-  link.href = `install_${sv ? 'sv' : 'en'}.${win ? 'ps1' : 'sh'}`;
+  link.href = main
+    ? 'data:text/plain;charset=utf-8,' + encodeURIComponent(mainInstaller(win))
+    : `install_${sv ? 'sv' : 'en'}.${win ? 'ps1' : 'sh'}`;
   link.textContent = text('Ladda ner installationsskript', 'Download installer');
   link.download = win ? 'runcom-install.ps1' : 'runcom-install.sh';
   document.getElementById('launch').textContent = win
