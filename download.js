@@ -44,3 +44,33 @@ document.getElementById('copy').addEventListener('click', async()=>{
     status.textContent = text('Markera och kopiera kommandona manuellt.', 'Select and copy the commands manually.');
   }
 });
+
+const uninstallOS = document.getElementById('uninstall-os');
+uninstallOS.value = /Win/i.test(platform) ? 'windows' : /Mac/i.test(platform) ? 'mac' : 'linux';
+function updateUninstall(){
+  const win = uninstallOS.value === 'windows';
+  const extension = win ? 'ps1' : 'sh';
+  const link = document.getElementById('uninstaller');
+  link.href = `uninstall.${extension}`;
+  link.download = `runcom-uninstall.${extension}`;
+  link.textContent = text('Ladda ner avinstallationsskript', 'Download uninstaller');
+  const base = 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/';
+  document.getElementById('uninstall-command').textContent = win
+    ? `Invoke-WebRequest -UseBasicParsing '${base}uninstall.ps1' -OutFile runcom-uninstall.ps1\npowershell -ExecutionPolicy Bypass -File .\\runcom-uninstall.ps1`
+    : `curl -fL '${base}uninstall.sh' -o runcom-uninstall.sh\nbash runcom-uninstall.sh`;
+  document.getElementById('uninstall-custom').textContent = win
+    ? 'powershell -ExecutionPolicy Bypass -File .\\runcom-uninstall.ps1 -InstallDir "C:\\path\\to\\Runcom"'
+    : 'RUNCOM_INSTALL_DIR="/path/to/runcom" bash runcom-uninstall.sh';
+  document.getElementById('uninstall-status').textContent = '';
+}
+uninstallOS.addEventListener('change', updateUninstall);
+updateUninstall();
+document.getElementById('uninstall-copy').addEventListener('click', async()=>{
+  const result = document.getElementById('uninstall-status');
+  try {
+    await navigator.clipboard.writeText(document.getElementById('uninstall-command').textContent);
+    result.textContent = text('Kommandona kopierades.', 'Commands copied.');
+  } catch {
+    result.textContent = text('Markera och kopiera kommandona manuellt.', 'Select and copy the commands manually.');
+  }
+});

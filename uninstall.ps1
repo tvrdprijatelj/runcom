@@ -36,10 +36,6 @@ try {
             }
         }
     }
-    foreach ($name in @('runcom.py', 'runcom-language', 'runcom-revision', 'help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico')) {
-        $path = Join-Path $InstallDir $name
-        if (Test-Path -LiteralPath $path -PathType Leaf) { Remove-Item -LiteralPath $path -Force }
-    }
     $venv = Join-Path $InstallDir 'venv'
     if (Test-Path -LiteralPath $venv) {
         $item = Get-Item -LiteralPath $venv -Force
@@ -49,6 +45,10 @@ try {
         if (Test-Path -LiteralPath (Join-Path $venv 'pyvenv.cfg') -PathType Leaf) {
             Remove-Item -LiteralPath $venv -Recurse -Force
         }
+    }
+    foreach ($name in @('runcom.py', 'runcom-language', 'runcom-revision', 'help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico')) {
+        $path = Join-Path $InstallDir $name
+        if (Test-Path -LiteralPath $path -PathType Leaf) { Remove-Item -LiteralPath $path -Force }
     }
     if ((Test-Path -LiteralPath $InstallDir) -and -not (Get-ChildItem -LiteralPath $InstallDir -Force | Select-Object -First 1)) {
         Remove-Item -LiteralPath $InstallDir

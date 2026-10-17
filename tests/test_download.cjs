@@ -7,7 +7,7 @@ const script = fs.readFileSync(path.join(__dirname, '../download.js'), 'utf8');
   for (const lang of ['sv','en']) {
     for (const platform of ['Linux','Win32','MacIntel']) {
       const elements = {};
-      for (const id of ['os','version','status','prerequisites','command','installer','launch','copy']) {
+      for (const id of ['os','version','status','prerequisites','command','installer','launch','copy','uninstall-os','uninstaller','uninstall-command','uninstall-copy','uninstall-status','uninstall-custom']) {
         elements[id] = {value:id === 'version'?'main':'',textContent:'',events:{},addEventListener(event,fn){this.events[event]=fn;}};
       }
       let clipboard = '';
@@ -28,9 +28,24 @@ const script = fs.readFileSync(path.join(__dirname, '../download.js'), 'utf8');
           assert.equal(clipboard,command);
         }
       }
+      for (const selected of ['linux','mac','windows']) {
+        elements['uninstall-os'].value = selected;
+        elements['uninstall-os'].events.change();
+        const win = selected === 'windows';
+        assert.equal(elements.uninstaller.href, `uninstall.${win ? 'ps1' : 'sh'}`);
+        assert.equal(elements.uninstaller.download, `runcom-uninstall.${win ? 'ps1' : 'sh'}`);
+        const command = elements['uninstall-command'].textContent;
+        assert.match(command, /raw\.githubusercontent\.com\/tvrdprijatelj\/runcom\/main\/uninstall\./);
+        assert.ok(command.includes(win ? 'powershell -ExecutionPolicy Bypass' : 'bash runcom-uninstall.sh'));
+        await elements['uninstall-copy'].events.click();
+        assert.equal(clipboard, command);
+        assert.match(elements['uninstall-custom'].textContent, win ? /-InstallDir/ : /RUNCOM_INSTALL_DIR/);
+      }
       context.navigator.clipboard.writeText=async()=>{throw Error('denied');};
       await elements.copy.events.click();
       assert.match(elements.status.textContent,/manuellt|manually/);
+      await elements['uninstall-copy'].events.click();
+      assert.match(elements['uninstall-status'].textContent,/manuellt|manually/);
     }
   }
   console.log('Download flow: all platforms, languages, versions and clipboard fallback PASS');
