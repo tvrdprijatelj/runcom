@@ -49,11 +49,25 @@ GITHUB_API = "https://api.github.com/repos/tvrdprijatelj/runcom"
 UNINSTALL_WORKER = r"""
 import os, pathlib, shutil, subprocess, sys, tkinter as tk
 from tkinter import messagebox
-work, folder, language = sys.argv[1:]
+work, folder, language, parent_pid = sys.argv[1:]
 try:
     # EOF arrives when the app exits and releases the pipe, including its venv.
     if sys.stdin.read() != 'uninstall':
         raise SystemExit(0)
+    if os.name == 'nt':
+        import ctypes
+        from ctypes import wintypes
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel.OpenProcess.restype = wintypes.HANDLE
+        kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        handle = kernel.OpenProcess(0x00100000, False, int(parent_pid))
+        if handle:
+            try:
+                kernel.WaitForSingleObject(handle, 0xFFFFFFFF)
+            finally:
+                kernel.CloseHandle(handle)
     env = os.environ.copy()
     env['RUNCOM_INSTALL_DIR'] = folder
     env['PATH'] = str(pathlib.Path(sys.executable).parent) + os.pathsep + env.get('PATH', '')
@@ -98,7 +112,7 @@ def launch_uninstaller(folder, language):
         worker.write_text(UNINSTALL_WORKER, encoding='utf-8')
         python = getattr(sys, '_base_executable', None) or sys.executable
         options = {'creationflags': NO_WINDOW} if IS_WIN else {'start_new_session': True}
-        process = subprocess.Popen([python, str(worker), str(work), str(folder), language],
+        process = subprocess.Popen([python, str(worker), str(work), str(folder), language, str(os.getpid())],
                                    cwd=str(work), stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
                                    stderr=subprocess.DEVNULL, **options)
         process.stdin.write(b'uninstall')

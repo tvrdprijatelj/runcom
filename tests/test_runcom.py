@@ -82,7 +82,7 @@ class ApplicationTests(unittest.TestCase):
             try:
                 self.assertNotEqual(work, folder)
                 self.assertEqual((work / script.name).read_text(), 'test uninstaller')
-                self.assertEqual(command[3:], [str(folder.resolve()), 'en'])
+                self.assertEqual(command[3:], [str(folder.resolve()), 'en', str(os.getpid())])
                 self.assertEqual(command[0], getattr(sys, '_base_executable', None) or sys.executable)
                 process.stdin.write.assert_called_once_with(b'uninstall')
                 process.stdin.close.assert_not_called()
@@ -99,7 +99,7 @@ class ApplicationTests(unittest.TestCase):
                 work.mkdir()
                 folder = Path(directory) / 'installed app'
                 result = subprocess.CompletedProcess([], 1 if failed else 0, b'uninstall output')
-                with patch.object(sys, 'argv', ['worker.py', str(work), str(folder), 'en']), \
+                with patch.object(sys, 'argv', ['worker.py', str(work), str(folder), 'en', '0']), \
                      patch.object(sys, 'stdin', io.StringIO('uninstall')), \
                      patch.object(runcom.subprocess, 'run', return_value=result) as execute, \
                      patch.object(runcom.tk, 'Tk'), \
