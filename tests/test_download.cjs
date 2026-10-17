@@ -8,11 +8,13 @@ const script = fs.readFileSync(path.join(__dirname, '../download.js'), 'utf8');
     for (const platform of ['Linux','Win32','MacIntel']) {
       const elements = {};
       for (const id of ['os','version','status','prerequisites','command','installer','launch','copy','uninstall-os','uninstaller','uninstall-command','uninstall-copy','uninstall-status','uninstall-custom','uninstall-distro','uninstall-menu','uninstall-terminal','uninstall-tools','uninstall-tools-note']) {
-        elements[id] = {value:id === 'version'?'main':'',textContent:'',events:{},addEventListener(event,fn){this.events[event]=fn;}};
+        elements[id] = {value:id === 'version'?'release':'',textContent:'',events:{},addEventListener(event,fn){this.events[event]=fn;}};
       }
       let clipboard = '';
       const context = {document:{documentElement:{lang},getElementById:id=>elements[id]},navigator:{platform,clipboard:{writeText:async value=>{clipboard=value;}}}};
       vm.runInNewContext(script, context);
+      assert.ok(!elements.command.textContent.includes('--ref main'));
+      assert.ok(!elements.command.textContent.includes('-Ref main'));
       assert.equal(elements.os.value, platform==='Win32'?'windows':platform==='MacIntel'?'mac':'linux');
       for (const os of ['arch','ubuntu','fedora','mac','windows','linux']) {
         for (const version of ['main','release']) {

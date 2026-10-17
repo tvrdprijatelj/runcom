@@ -24,6 +24,98 @@ class ApplicationTests(unittest.TestCase):
         app.q = queue.Queue(maxsize=256)
         return app
 
+    def test_uninstall_cancel_does_not_start_or_close(self):
+        app = self.app()
+        app.on_close = Mock()
+        app._confirm_discard = Mock(return_value=True)
+        with patch.object(runcom.messagebox, 'askyesno', return_value=False), patch.object(runcom, 'launch_uninstaller') as launch:
+            app.uninstall_app()
+        launch.assert_not_called()
+        app.on_close.assert_not_called()
+        app._confirm_discard.assert_not_called()
+
+    def test_uninstall_preserves_unsaved_work_when_save_cancelled(self):
+        app = self.app()
+        app.on_close = Mock()
+        app._confirm_discard = Mock(return_value=False)
+        with patch.object(runcom.messagebox, 'askyesno', return_value=True), patch.object(runcom, 'launch_uninstaller') as launch:
+            app.uninstall_app()
+        launch.assert_not_called()
+        app.on_close.assert_not_called()
+
+    def test_uninstall_starts_before_closing_and_reports_launch_failure(self):
+        app = self.app()
+        app.on_close = Mock()
+        app._confirm_discard = Mock(return_value=True)
+        with patch.object(runcom.messagebox, 'askyesno', return_value=True), patch.object(runcom, 'launch_uninstaller') as launch:
+            app.uninstall_app()
+            launch.assert_called_once()
+            app.on_close.assert_called_once_with(confirm=False)
+            app.on_close.reset_mock()
+            launch.side_effect = OSError('launch failed')
+            with patch.object(runcom.messagebox, 'showerror') as error:
+                app.uninstall_app()
+            error.assert_called_once()
+            app.on_close.assert_not_called()
+
+    def test_uninstall_launcher_rejects_checkout_and_missing_installer(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            with self.assertRaises(ValueError):
+                runcom.launch_uninstaller(folder, 'en')
+            (folder / 'runcom-revision').write_text('abc')
+            (folder / ('uninstall.ps1' if runcom.IS_WIN else 'uninstall.sh')).write_text('unused')
+            (folder / '.git').mkdir()
+            with self.assertRaises(ValueError):
+                runcom.launch_uninstaller(folder, 'en')
+
+    def test_uninstall_launcher_copies_script_outside_install_and_waits_for_exit(self):
+        with tempfile.TemporaryDirectory() as directory:
+            folder = Path(directory)
+            (folder / 'runcom-revision').write_text('abc')
+            script = folder / ('uninstall.ps1' if runcom.IS_WIN else 'uninstall.sh')
+            script.write_text('test uninstaller')
+            with patch.object(runcom.subprocess, 'Popen') as popen:
+                process = runcom.launch_uninstaller(folder, 'en')
+            command = popen.call_args.args[0]
+            work = Path(command[2])
+            try:
+                self.assertNotEqual(work, folder)
+                self.assertEqual((work / script.name).read_text(), 'test uninstaller')
+                self.assertEqual(command[3:], [str(folder.resolve()), 'en'])
+                self.assertEqual(command[0], getattr(sys, '_base_executable', None) or sys.executable)
+                process.stdin.write.assert_called_once_with(b'uninstall')
+                process.stdin.close.assert_not_called()
+                compile((work / 'worker.py').read_text(), 'worker.py', 'exec')
+            finally:
+                import shutil
+                shutil.rmtree(work)
+
+    def test_uninstall_worker_uses_confirmation_flags_and_keeps_failure_log(self):
+        import io
+        for failed in (False, True):
+            with self.subTest(failed=failed), tempfile.TemporaryDirectory() as directory:
+                work = Path(directory) / 'worker'
+                work.mkdir()
+                folder = Path(directory) / 'installed app'
+                result = subprocess.CompletedProcess([], 1 if failed else 0, b'uninstall output')
+                with patch.object(sys, 'argv', ['worker.py', str(work), str(folder), 'en']), \
+                     patch.object(sys, 'stdin', io.StringIO('uninstall')), \
+                     patch.object(runcom.subprocess, 'run', return_value=result) as execute, \
+                     patch.object(runcom.tk, 'Tk'), \
+                     patch.object(runcom.messagebox, 'showinfo') as info, \
+                     patch.object(runcom.messagebox, 'showerror') as error:
+                    exec(runcom.UNINSTALL_WORKER, {})
+                args = execute.call_args.args[0]
+                self.assertIn('-Yes' if os.name == 'nt' else '--yes', args)
+                self.assertEqual(execute.call_args.kwargs['env']['RUNCOM_INSTALL_DIR'], str(folder))
+                if failed:
+                    error.assert_called_once()
+                    self.assertEqual((work / 'uninstall.log').read_bytes(), b'uninstall output')
+                else:
+                    info.assert_called_once()
+                    self.assertFalse(work.exists())
+
     def test_sudo_command_detection(self):
         for text in ('sudo apt update', 'echo ready && sudo true', 'if sudo true; then echo ok; fi',
                      'X=1 /usr/bin/sudo true'):

@@ -22,7 +22,7 @@ function updateOS(){
     : `curl -fL '${base}install.sh' -o runcom-install.sh\nbash runcom-install.sh${main ? ' --ref main' : ''} --lang ${sv ? 'sv' : 'en'}`;
   const link = document.getElementById('installer');
   link.href = `install_${sv ? 'sv' : 'en'}.${win ? 'ps1' : 'sh'}`;
-  link.textContent = text('Ladda ner installerare (main)', 'Download installer (main)');
+  link.textContent = text('Ladda ner installationsskript', 'Download installer');
   link.download = win ? 'runcom-install.ps1' : 'runcom-install.sh';
   document.getElementById('launch').textContent = win
     ? text('Sök efter Runcom i Start-menyn eller använd skrivbordsgenvägen. Installationen visar också ett startkommando.', 'Find Runcom in the Start menu or use the desktop shortcut. The installer also prints a launch command.')

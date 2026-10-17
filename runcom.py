@@ -45,6 +45,73 @@ HELP_URL = "https://tvrdprijatelj.github.io/runcom/help.html"
 GITHUB_API = "https://api.github.com/repos/tvrdprijatelj/runcom"
 
 
+# Run outside the installation so Windows can remove the venv after Runcom exits.
+UNINSTALL_WORKER = r"""
+import os, pathlib, shutil, subprocess, sys, tkinter as tk
+from tkinter import messagebox
+work, folder, language = sys.argv[1:]
+try:
+    # EOF arrives when the app exits and releases the pipe, including its venv.
+    if sys.stdin.read() != 'uninstall':
+        raise SystemExit(0)
+    env = os.environ.copy()
+    env['RUNCOM_INSTALL_DIR'] = folder
+    env['PATH'] = str(pathlib.Path(sys.executable).parent) + os.pathsep + env.get('PATH', '')
+    script = str(pathlib.Path(work) / ('uninstall.ps1' if os.name == 'nt' else 'uninstall.sh'))
+    command = (['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script,
+                '-InstallDir', folder, '-Yes'] if os.name == 'nt' else ['bash', script, '--yes'])
+    options = {'creationflags': subprocess.CREATE_NO_WINDOW} if os.name == 'nt' else {}
+    try:
+        result = subprocess.run(command, cwd=work, env=env, stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, **options)
+    except Exception as error:
+        result = subprocess.CompletedProcess(command, 1, str(error).encode('utf-8'))
+    root = tk.Tk()
+    root.withdraw()
+    title = 'Avinstallera Runcom' if language == 'sv' else 'Uninstall Runcom'
+    if result.returncode:
+        log = pathlib.Path(work) / 'uninstall.log'
+        log.write_bytes(result.stdout)
+        messagebox.showerror(title, ('Avinstallationen misslyckades. Logg: ' if language == 'sv'
+                             else 'Uninstallation failed. Log: ') + str(log), parent=root)
+    else:
+        messagebox.showinfo(title, ('Runcom har avinstallerats. Dina egna skript finns kvar.'
+                            if language == 'sv' else 'Runcom was uninstalled. Your own scripts are kept.'), parent=root)
+    root.destroy()
+finally:
+    if 'result' not in locals() or result.returncode == 0:
+        shutil.rmtree(work, ignore_errors=True)
+"""
+
+
+def launch_uninstaller(folder, language):
+    folder = Path(folder).resolve()
+    script = folder / ('uninstall.ps1' if IS_WIN else 'uninstall.sh')
+    if (folder / '.git').exists() or not (folder / 'runcom-revision').is_file() or not script.is_file():
+        raise ValueError('Avinstallation kräver en installerad kopia av Runcom. Kör installationsskriptet igen först.'
+                         if language == 'sv' else
+                         'Uninstallation requires an installed copy of Runcom. Run the installer again first.')
+    work = Path(tempfile.mkdtemp(prefix='runcom-uninstall-'))
+    try:
+        shutil.copyfile(script, work / script.name)
+        worker = work / 'worker.py'
+        worker.write_text(UNINSTALL_WORKER, encoding='utf-8')
+        python = getattr(sys, '_base_executable', None) or sys.executable
+        options = {'creationflags': NO_WINDOW} if IS_WIN else {'start_new_session': True}
+        process = subprocess.Popen([python, str(worker), str(work), str(folder), language],
+                                   cwd=str(work), stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                                   stderr=subprocess.DEVNULL, **options)
+        process.stdin.write(b'uninstall')
+        process.stdin.flush()
+        return process  # Keep stdin open until the application process exits.
+    except Exception:
+        if 'process' in locals():
+            process.terminate()
+            process.wait()
+        shutil.rmtree(str(work), ignore_errors=True)
+        raise
+
+
 def github_json(endpoint):
     request = urllib.request.Request(GITHUB_API + endpoint, headers={
         "Accept": "application/vnd.github+json", "User-Agent": "Runcom-updater"})
@@ -138,6 +205,12 @@ def installed_language():
 
 LANGUAGE = installed_language()
 TRANSLATIONS = {
+    'Inställningar': 'Settings',
+    'Avinstallera Runcom': 'Uninstall Runcom',
+    'Stäng': 'Close',
+    'Appen och dess genvägar tas bort. Dina egna skript sparas.': 'The app and its shortcuts are removed. Your own scripts are kept.',
+    'Avinstallera Runcom och stäng appen? Pågående skript och terminaler stoppas. Dina egna skript sparas.': 'Uninstall Runcom and close the app? Running scripts and terminals will be stopped. Your own scripts are kept.',
+    'Kunde inte starta avinstallationen': 'Could not start uninstallation',
     'Windows-kommandon: skriv på raden och tryck Enter. Interaktiva konsolprogram körs med F6.': 'Windows commands: type on the input line and press Enter. Use F6 for interactive console programs.',
     '▶ Kör vald fil': '▶ Run selected file',
     'Öppna och kör…': 'Open and run…',
@@ -783,6 +856,8 @@ class App(tk.Tk):
                  bg="#101722", fg="#77c7ff").pack(side="left")
         tk.Label(header, text=tr('Skriv. Kör. Se resultatet.'), bg="#101722",
                  fg="#a5b5cc", padx=20).pack(side="left")
+        self.btn_settings = tk.Button(header, text=tr('Inställningar'), command=self.open_settings)
+        self.btn_settings.pack(side="right", padx=6)
         self.btn_help = tk.Button(header, text=tr('Hjälp'), command=self.open_help,
                                   bg="#23334a", fg="#e4ecf7")
         self.btn_help.pack(side="right")
@@ -918,6 +993,38 @@ class App(tk.Tk):
         self.tabs.select(self.terminal)
         self.terminal.start()
         self.terminal.focus_terminal()
+
+    def open_settings(self):
+        existing = getattr(self, '_settings_window', None)
+        if existing is not None and existing.winfo_exists():
+            existing.lift()
+            return
+        window = self._settings_window = tk.Toplevel(self)
+        window.title(tr('Inställningar'))
+        window.transient(self)
+        window.resizable(False, False)
+        frame = tk.Frame(window, padx=24, pady=20)
+        frame.pack(fill="both", expand=True)
+        tk.Label(frame, text=tr('Avinstallera Runcom'), font=('TkDefaultFont', 12, 'bold')).pack(anchor='w')
+        tk.Label(frame, text=tr('Appen och dess genvägar tas bort. Dina egna skript sparas.'),
+                 wraplength=380, justify='left').pack(anchor='w', pady=12)
+        tk.Button(frame, text=tr('Avinstallera Runcom'), command=self.uninstall_app,
+                  bg='#8b3030', fg='white').pack(anchor='w')
+        tk.Button(frame, text=tr('Stäng'), command=window.destroy).pack(anchor='e', pady=(16, 0))
+
+    def uninstall_app(self):
+        if not messagebox.askyesno(tr('Avinstallera Runcom'),
+                tr('Avinstallera Runcom och stäng appen? Pågående skript och terminaler stoppas. Dina egna skript sparas.'),
+                parent=self, default='no'):
+            return
+        if not self._confirm_discard():
+            return
+        try:
+            self._uninstall_process = launch_uninstaller(Path(__file__).resolve().parent, LANGUAGE)
+        except (OSError, ValueError) as error:
+            messagebox.showerror(tr('Kunde inte starta avinstallationen'), str(error), parent=self)
+            return
+        self.on_close(confirm=False)
 
     def check_update(self):
         self.btn_update.config(state="disabled")
@@ -1453,8 +1560,8 @@ class App(tk.Tk):
             env["PATH"] = os.pathsep.join(extra + [env.get("PATH", "")])
         return env
 
-    def on_close(self):
-        if not self._confirm_discard():
+    def on_close(self, confirm=True):
+        if confirm and not self._confirm_discard():
             return
         if self.proc is not None:
             self.stop()

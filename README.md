@@ -105,6 +105,8 @@ Click **Uppdatera / Update** next to Help to check the latest published GitHub r
 
 ## Uninstall
 
+In an installed copy, open **Settings → Uninstall Runcom** (Swedish: **Inställningar → Avinstallera Runcom**). Confirm and save any unsaved work when prompted. Runcom stops its scripts and terminals, closes, and runs the bundled uninstaller in a separate process. Personal scripts are kept. This option works offline and requires an installation containing the bundled uninstaller; it refuses development checkouts.
+
 Close Runcom and open **Avinstallera Runcom** from the Linux application menu or Windows Start menu. Confirm the displayed location with `y` and Enter. The installed launcher remembers custom installation paths. On macOS open **Uninstall Runcom.command** in the installation folder. These local launchers are included with new main installations and work offline.
 
 If the shortcut is missing, use https://tvrdprijatelj.github.io/runcom/download_sv.html#uninstall (or download_en.html#uninstall). The page has OS/distribution-specific steps, copyable commands, a separate download button, custom-path instructions, outcome checks and troubleshooting. Linux choices include Arch, Ubuntu, Debian, Mint, Fedora, openSUSE and Alpine.

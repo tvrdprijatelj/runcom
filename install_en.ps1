@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $runcomInstallerTemp = Join-Path ([IO.Path]::GetTempPath()) ('runcom-' + [guid]::NewGuid() + '.ps1')
 try {
     Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1' -OutFile $runcomInstallerTemp
-    & $runcomInstallerTemp -Ref main @args -Language en
+    & $runcomInstallerTemp @args -Language en
 } finally {
     Remove-Item $runcomInstallerTemp -ErrorAction SilentlyContinue
 }

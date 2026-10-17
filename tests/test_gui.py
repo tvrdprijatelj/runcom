@@ -44,6 +44,20 @@ class GuiTests(unittest.TestCase):
             time.sleep(0.01)
         self.fail('Timed out waiting for GUI state')
 
+    def test_settings_window_can_be_opened_reused_and_closed(self):
+        self.app.btn_settings.invoke()
+        self.app.update()
+        window = self.app._settings_window
+        self.assertTrue(window.winfo_exists())
+        self.app.btn_settings.invoke()
+        self.assertIs(self.app._settings_window, window)
+        buttons = [child for frame in window.winfo_children() for child in frame.winfo_children()
+                   if isinstance(child, tk.Button)]
+        self.assertTrue(any(button['text'] == runcom.tr('Avinstallera Runcom') for button in buttons))
+        window.destroy()
+        self.app.btn_settings.invoke()
+        self.assertTrue(self.app._settings_window.winfo_exists())
+
     def test_english_buttons_and_file_dialog(self):
         self.app.on_close()
         with patch.object(runcom, 'LANGUAGE', 'en'), patch.object(runcom, 'DEFAULT_DIR', Path(self.folder.name)):
