@@ -123,6 +123,23 @@ class ApplicationTests(unittest.TestCase):
         for text in ('# sudo true', 'echo sudo', 'echo "sudo true"', 'printf "%s" sudo', ''):
             self.assertFalse(runcom.contains_sudo_command(text), text)
 
+    def test_sudo_status_markers_are_hidden_and_handle_split_output(self):
+        panel = object.__new__(runcom.TerminalPanel)
+        panel._sudo_control_buffer = ''
+        panel.render = Mock()
+        panel.keep_sudo = Mock()
+        panel.sudo_state = Mock()
+        panel._terminal_output('before\x1dRUNCOM_SUDO_ACT')
+        panel._terminal_output('IVE\x1dafter')
+        self.assertEqual(''.join(call.args[0] for call in panel.render.call_args_list), 'beforeafter')
+        panel.keep_sudo.set.assert_called_with(True)
+        panel.sudo_state.set.assert_called_with(runcom.tr('Sudo: aktivt under appsessionen'))
+
+        panel._terminal_output('\x1dRUNCOM_SUDO_EXPIRED\x1d')
+        panel.keep_sudo.set.assert_called_with(False)
+        panel.sudo_state.set.assert_called_with(
+            runcom.tr('Sudo: autentiseringen avbröts eller löpte ut'))
+
     @unittest.skipIf(os.name == 'nt', 'Unix sudo routing')
     def test_sudo_script_automatically_uses_sudo_runner(self):
         app = self.app()

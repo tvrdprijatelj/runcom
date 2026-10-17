@@ -236,6 +236,12 @@ TRANSLATIONS = {
     'Terminalen är stängd. Starta om den.': 'The terminal is closed. Restart it.',
     'Starta om terminal': 'Restart terminal',
     'Håll sudo aktivt i sessionen': 'Keep sudo active for this session',
+    'Sudo: inte aktivt': 'Sudo: inactive',
+    'Sudo: väntar på lösenord i terminalen': 'Sudo: waiting for password in the terminal',
+    'Sudo: aktivt under appsessionen': 'Sudo: active for the app session',
+    'Sudo: autentiseringen avbröts eller löpte ut': 'Sudo: authentication was cancelled or expired',
+    'Aktivera sudo': 'Enable sudo',
+    'Sudo-lösenordet skrivs direkt i terminalen och sparas aldrig av Runcom. Systemets sudo-behörighet hålls aktiv medan appen är öppen.': 'Enter the sudo password directly in the terminal. Runcom never stores it. The system sudo authorization is kept active while the app is open.',
     'Kommandoterminal · Ctrl+C avbryter · Ctrl+Shift+V klistrar in. Helskärmsprogram körs med F6.': 'Command terminal · Ctrl+C interrupts · Ctrl+Shift+V pastes. Use F6 for full-screen programs.',
     'Kunde inte starta terminalen': 'Could not start the terminal',
     'Ny terminalsession': 'New terminal session',
@@ -603,12 +609,15 @@ class TerminalPanel(tk.Frame):
         self.escape = ''
         self.poll_id = None
         self.keep_sudo = tk.BooleanVar(value=False)
+        self.sudo_state = tk.StringVar(value=tr('Sudo: inte aktivt'))
+        self._sudo_control_buffer = ''
         toolbar = tk.Frame(self)
         toolbar.pack(fill='x')
         tk.Button(toolbar, text=tr('Starta om terminal'), command=self.restart).pack(side='left')
         if not IS_WIN:
             tk.Checkbutton(toolbar, text=tr('Håll sudo aktivt i sessionen'),
                            variable=self.keep_sudo, command=self.toggle_sudo).pack(side='left')
+            tk.Label(toolbar, textvariable=self.sudo_state, fg='#a5b5cc').pack(side='left', padx=10)
         hint = ('Windows-kommandon: skriv på raden och tryck Enter. Interaktiva konsolprogram körs med F6.' if IS_WIN else
                 'Kommandoterminal · Ctrl+C avbryter · Ctrl+Shift+V klistrar in. Helskärmsprogram körs med F6.')
         tk.Label(self, text=tr(hint),
@@ -650,7 +659,8 @@ class TerminalPanel(tk.Frame):
 
     def restart(self):
         self.close()
-        self.keep_sudo.set(False)
+        self._set_sudo_state(False)
+        self._sudo_control_buffer = ''
         self.escape = ''
         self.render('\n' + tr('Ny terminalsession') + '\n')
         self.start()
@@ -725,6 +735,7 @@ class TerminalPanel(tk.Frame):
             messagebox.showerror(tr('Fel'), tr('Kommandot sudo hittades inte.'), parent=self)
             return
         if self.keep_sudo.get():
+            self._set_sudo_state(None)
             # One unprivileged helper, bound to this shell; no password handling.
             refresh = ("import os, subprocess, sys, time; parent = os.getppid(); "
                        "\nwhile os.getppid() == parent:\n"
@@ -732,17 +743,63 @@ class TerminalPanel(tk.Frame):
                        " if os.getppid() != parent: break\n"
                        " if subprocess.call([sys.argv[1], '-n', '-v'], "
                        "stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, "
-                       "stderr=subprocess.DEVNULL) != 0: break\n")
+                       "stderr=subprocess.DEVNULL) != 0:\n"
+                       "  sys.stdout.write('\\x1dRUNCOM_SUDO_EXPIRED\\x1d'); sys.stdout.flush(); break\n")
             helper = shlex.join([python_executable(), '-c', refresh, shutil.which('sudo')])
             validation = "sudo -k -v" if fresh else "sudo -v"
-            command = (validation + " && { " + helper + " & __runcom_sudo_keeper=$!; "
-                       "trap 'kill \"$__runcom_sudo_keeper\" 2>/dev/null' EXIT; }")
+            command = ("if " + validation + "; then printf '\\035RUNCOM_SUDO_ACTIVE\\035'; { "
+                       + helper + " & __runcom_sudo_keeper=$!; "
+                       "trap 'kill \"$__runcom_sudo_keeper\" 2>/dev/null' EXIT; }; "
+                       "else printf '\\035RUNCOM_SUDO_INACTIVE\\035'; fi")
         else:
             command = ('if [ -n "${__runcom_sudo_keeper:-}" ]; then '
                        'kill "$__runcom_sudo_keeper" 2>/dev/null; '
                        'unset __runcom_sudo_keeper; fi; sudo -k')
         if not self.command(command):
-            self.keep_sudo.set(not self.keep_sudo.get())
+            if self.keep_sudo.get():
+                self._set_sudo_state(False)
+            else:
+                self._set_sudo_state(True)
+        elif not self.keep_sudo.get():
+            self._set_sudo_state(False)
+
+    def _set_sudo_state(self, active):
+        if active is True:
+            self.keep_sudo.set(True)
+            self.sudo_state.set(tr('Sudo: aktivt under appsessionen'))
+        elif active is None:
+            self.keep_sudo.set(True)
+            self.sudo_state.set(tr('Sudo: väntar på lösenord i terminalen'))
+        else:
+            self.keep_sudo.set(False)
+            self.sudo_state.set(tr('Sudo: inte aktivt'))
+
+    def _terminal_output(self, value):
+        tokens = {
+            '\x1dRUNCOM_SUDO_ACTIVE\x1d': True,
+            '\x1dRUNCOM_SUDO_INACTIVE\x1d': 'expired',
+            '\x1dRUNCOM_SUDO_EXPIRED\x1d': 'expired',
+        }
+        data = self._sudo_control_buffer + value
+        self._sudo_control_buffer = ''
+        while data:
+            found = [(data.find(token), token, state) for token, state in tokens.items()
+                     if data.find(token) >= 0]
+            if found:
+                position, token, state = min(found)
+                self.render(data[:position])
+                if state == 'expired':
+                    self._set_sudo_state(False)
+                    self.sudo_state.set(tr('Sudo: autentiseringen avbröts eller löpte ut'))
+                else:
+                    self._set_sudo_state(state)
+                data = data[position + len(token):]
+                continue
+            held = max((size for token in tokens for size in range(1, len(token))
+                        if data.endswith(token[:size])), default=0)
+            self.render(data[:-held] if held else data)
+            self._sudo_control_buffer = data[-held:] if held else ''
+            break
 
     def poll(self):
         self.poll_id = None
@@ -750,10 +807,10 @@ class TerminalPanel(tk.Frame):
             for _ in range(100):
                 kind, value = self.session.events.get_nowait()
                 if kind == 'text':
-                    self.render(value)
+                    self._terminal_output(value)
                 else:
                     self.render('\n' + tr('Terminalsessionen avslutades. Starta om för att fortsätta.') + '\n')
-                    self.keep_sudo.set(False)
+                    self._set_sudo_state(False)
                     return
         except queue.Empty:
             pass
@@ -998,7 +1055,15 @@ class App(tk.Tk):
 
     def startup_sudo(self):
         """Authenticate in the same PTY used for subsequent sudo commands."""
-        if IS_WIN or self._closing or not shutil.which('sudo'):
+        self.activate_sudo()
+
+    def activate_sudo(self, show_error=False):
+        """Request sudo in the app PTY; sudo itself owns the password prompt."""
+        if IS_WIN or self._closing:
+            return
+        if not shutil.which('sudo'):
+            if show_error:
+                messagebox.showerror(tr('Fel'), tr('Kommandot sudo hittades inte.'), parent=self)
             return
         self.open_terminal()
         self.terminal.keep_sudo.set(True)
@@ -1020,6 +1085,16 @@ class App(tk.Tk):
         window.resizable(False, False)
         frame = tk.Frame(window, padx=24, pady=20)
         frame.pack(fill="both", expand=True)
+        if not IS_WIN:
+            def enable_sudo():
+                window.destroy()
+                self.activate_sudo(show_error=True)
+            tk.Label(frame, text='Sudo', font=('TkDefaultFont', 12, 'bold')).pack(anchor='w')
+            tk.Label(frame, text=tr('Sudo-lösenordet skrivs direkt i terminalen och sparas aldrig av Runcom. Systemets sudo-behörighet hålls aktiv medan appen är öppen.'),
+                     wraplength=380, justify='left').pack(anchor='w', pady=(8, 4))
+            tk.Label(frame, textvariable=self.terminal.sudo_state, fg='#a5b5cc').pack(anchor='w')
+            tk.Button(frame, text=tr('Aktivera sudo'), command=enable_sudo).pack(anchor='w', pady=(8, 18))
+            ttk.Separator(frame).pack(fill='x', pady=(0, 18))
         tk.Label(frame, text=tr('Avinstallera Runcom'), font=('TkDefaultFont', 12, 'bold')).pack(anchor='w')
         tk.Label(frame, text=tr('Appen och dess genvägar tas bort. Dina egna skript sparas.'),
                  wraplength=380, justify='left').pack(anchor='w', pady=12)

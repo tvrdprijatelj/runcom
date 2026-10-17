@@ -54,6 +54,8 @@ class GuiTests(unittest.TestCase):
         buttons = [child for frame in window.winfo_children() for child in frame.winfo_children()
                    if isinstance(child, tk.Button)]
         self.assertTrue(any(button['text'] == runcom.tr('Avinstallera Runcom') for button in buttons))
+        if not runcom.IS_WIN:
+            self.assertTrue(any(button['text'] == runcom.tr('Aktivera sudo') for button in buttons))
         window.destroy()
         self.app.btn_settings.invoke()
         self.assertTrue(self.app._settings_window.winfo_exists())
@@ -96,11 +98,13 @@ class GuiTests(unittest.TestCase):
             panel.keep_sudo.set(True)
             panel.toggle_sudo()
             self.pump_until(lambda: log.exists() and '-v' in log.read_text())
+            self.pump_until(lambda: panel.sudo_state.get() == 'Sudo: aktivt under appsessionen')
             self.pump_until(lambda: panel.session.idle())
             panel.keep_sudo.set(False)
             panel.toggle_sudo()
             self.pump_until(lambda: '-k' in log.read_text())
         self.assertFalse(panel.keep_sudo.get())
+        self.assertEqual(panel.sudo_state.get(), 'Sudo: inte aktivt')
 
     @unittest.skipIf(os.name == 'nt', 'Unix sudo session')
     def test_startup_sudo_requests_fresh_authentication(self):
@@ -113,6 +117,7 @@ class GuiTests(unittest.TestCase):
         with patch.dict(os.environ, {'PATH': str(fake_bin) + os.pathsep + os.environ.get('PATH', '')}):
             self.app.startup_sudo()
             self.pump_until(lambda: log.exists() and '-k -v' in log.read_text())
+            self.pump_until(lambda: self.app.terminal.sudo_state.get() == 'Sudo: aktivt under appsessionen')
         self.assertEqual(self.app.tabs.select(), str(self.app.terminal))
         self.assertTrue(self.app.terminal.keep_sudo.get())
 
