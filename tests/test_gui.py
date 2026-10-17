@@ -84,6 +84,14 @@ class GuiTests(unittest.TestCase):
         self.assertIsNot(panel.session, old)
         self.assertIsNotNone(old.proc.poll())
 
+    def test_clear_terminal_button(self):
+        panel = self.app.terminal
+        panel.render('terminal text')
+        self.assertEqual(panel.btn_clear['text'], runcom.tr('Rensa terminalen'))
+        panel.btn_clear.invoke()
+        self.assertEqual(panel.display.get('1.0', 'end-1c'), '')
+        self.assertEqual(panel.display.index('terminal_cursor'), '1.0')
+
     @unittest.skipIf(os.name == 'nt', 'Unix sudo session')
     def test_sudo_session_uses_validation_and_invalidation_without_password(self):
         fake_bin = Path(self.folder.name) / 'bin'

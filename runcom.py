@@ -235,6 +235,7 @@ TRANSLATIONS = {
     'Terminal (F7)': 'Terminal (F7)',
     'Terminalen är stängd. Starta om den.': 'The terminal is closed. Restart it.',
     'Starta om terminal': 'Restart terminal',
+    'Rensa terminalen': 'Clear terminal',
     'Håll sudo aktivt i sessionen': 'Keep sudo active for this session',
     'Sudo: inte aktivt': 'Sudo: inactive',
     'Sudo: väntar på lösenord i terminalen': 'Sudo: waiting for password in the terminal',
@@ -614,6 +615,8 @@ class TerminalPanel(tk.Frame):
         toolbar = tk.Frame(self)
         toolbar.pack(fill='x')
         tk.Button(toolbar, text=tr('Starta om terminal'), command=self.restart).pack(side='left')
+        self.btn_clear = tk.Button(toolbar, text=tr('Rensa terminalen'), command=self.clear)
+        self.btn_clear.pack(side='right')
         if not IS_WIN:
             tk.Checkbutton(toolbar, text=tr('Håll sudo aktivt i sessionen'),
                            variable=self.keep_sudo, command=self.toggle_sudo).pack(side='left')
@@ -665,6 +668,18 @@ class TerminalPanel(tk.Frame):
         self.render('\n' + tr('Ny terminalsession') + '\n')
         self.start()
         self.focus_terminal()
+
+    def clear(self, focus=True):
+        self.escape = ''
+        self.display.config(state='normal')
+        self.display.delete('1.0', 'end')
+        self.display.mark_set('terminal_cursor', '1.0')
+        self.display.mark_gravity('terminal_cursor', 'right')
+        self.display.config(state='disabled')
+        if IS_WIN:
+            self.line.delete(0, 'end')
+        if focus:
+            self.focus_terminal()
 
     def close(self):
         if self.poll_id is not None:
@@ -1657,6 +1672,7 @@ class App(tk.Tk):
             self.stop()
             if not IS_WIN:
                 self._force_stop(self.proc)
+        self.terminal.clear(focus=False)
         self.terminal.close()
         self._closing = True
         self.after_cancel(self._queue_after)
