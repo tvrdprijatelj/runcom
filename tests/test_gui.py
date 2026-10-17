@@ -69,6 +69,7 @@ class GuiTests(unittest.TestCase):
             self.assertEqual(self.app.btn_stop['text'], '■ Stop')
             self.assertEqual(self.app.tabs.tab(self.app.terminal, 'text'), 'Terminal')
             self.assertEqual(runcom.tr('Håll sudo aktivt i sessionen'), 'Keep sudo active for this session')
+            self.assertEqual(runcom.tr('Kör med sudo (F8)'), 'Run with sudo (F8)')
             with patch.object(runcom.simpledialog, 'askstring', return_value=None) as dialog:
                 self.app.new_file()
             self.assertEqual(dialog.call_args[0][0], 'New script file')
@@ -124,7 +125,7 @@ class GuiTests(unittest.TestCase):
         fake.chmod(0o700)
         with patch.dict(os.environ, {'PATH': str(fake_bin) + os.pathsep + os.environ.get('PATH', '')}):
             self.app.startup_sudo()
-            self.pump_until(lambda: log.exists() and '-k -v' in log.read_text())
+            self.pump_until(lambda: log.exists() and '-k\n-v\n' in log.read_text())
             self.pump_until(lambda: self.app.terminal.sudo_state.get() == 'Sudo: aktivt under appsessionen')
         self.assertEqual(self.app.tabs.select(), str(self.app.terminal))
         self.assertTrue(self.app.terminal.keep_sudo.get())
@@ -137,14 +138,40 @@ class GuiTests(unittest.TestCase):
         fake_bin = Path(self.folder.name) / 'bin'
         fake_bin.mkdir()
         fake = fake_bin / 'sudo'
-        fake.write_text('#!/bin/sh\n[ "$1" = "--" ] && shift\nexec "$@"\n')
+        fake.write_text('#!/bin/sh\n'
+                        'case "$1" in -k|-v|-n) exit 0;; esac\n'
+                        '[ "$1" = "--" ] && shift\nexec "$@"\n')
         fake.chmod(0o700)
         with patch.dict(os.environ, {'PATH': str(fake_bin) + os.pathsep + os.environ.get('PATH', '')}):
             self.app.open_terminal()
             original = self.app.terminal.session
             self.app.run_with_sudo()
             self.pump_until(lambda: '\nsudo-script-ok\n' in self.app.terminal.display.get('1.0', 'end'))
+            self.pump_until(lambda: self.app.terminal.sudo_state.get() == 'Sudo: aktivt under appsessionen')
             self.assertIs(self.app.terminal.session, original)
+            self.assertTrue(self.app.bind('<F8>'))
+
+    @unittest.skipIf(os.name == 'nt', 'Unix sudo routing')
+    def test_script_with_sudo_elevates_only_explicit_command(self):
+        script = Path(self.folder.name) / 'mixed-privileges.sh'
+        script.write_text("printf '\\nouter:%s\\n' \"${RUNCOM_FAKE_SUDO:-user}\"\n"
+                          "sudo sh -c 'printf \"inner:%s\\n\" \"${RUNCOM_FAKE_SUDO:-user}\"'\n")
+        self.app.load_path(script)
+        fake_bin = Path(self.folder.name) / 'bin'
+        fake_bin.mkdir()
+        fake = fake_bin / 'sudo'
+        fake.write_text('#!/bin/sh\n'
+                        'case "$1" in -k|-v|-n) exit 0;; esac\n'
+                        '[ "$1" = "--" ] && shift\n'
+                        'RUNCOM_FAKE_SUDO=root exec "$@"\n')
+        fake.chmod(0o700)
+        with patch.dict(os.environ, {'PATH': str(fake_bin) + os.pathsep + os.environ.get('PATH', '')}):
+            self.app.run_in_app()
+            panel = self.app.terminal
+            self.pump_until(lambda: 'inner:root' in panel.display.get('1.0', 'end'))
+        output = panel.display.get('1.0', 'end')
+        self.assertIn('outer:user', output)
+        self.assertIn('inner:root', output)
 
     def test_help_button_and_shortcut(self):
         self.assertEqual(self.app.btn_help['text'], 'Hjälp')

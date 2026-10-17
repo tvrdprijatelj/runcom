@@ -158,15 +158,15 @@ class ApplicationTests(unittest.TestCase):
             runcom.tr('Sudo: autentiseringen avbröts eller löpte ut'))
 
     @unittest.skipIf(os.name == 'nt', 'Unix sudo routing')
-    def test_sudo_script_automatically_uses_sudo_runner(self):
+    def test_sudo_script_runs_as_user_after_sudo_authentication(self):
         app = self.app()
         app.proc = None
         app.current = Path('/tmp/example.sh')
         app.editor.get.return_value = 'sudo apt update\n'
         app._prepare_run = Mock(return_value=True)
-        app.run_with_sudo = Mock()
+        app._run_in_builtin_terminal = Mock()
         app.run_in_app()
-        app.run_with_sudo.assert_called_once_with()
+        app._run_in_builtin_terminal.assert_called_once_with(elevated=False, prepared=True)
 
     def test_help_uses_local_page_when_installed(self):
         app = self.app()

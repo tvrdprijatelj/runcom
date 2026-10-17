@@ -306,6 +306,7 @@ TRANSLATIONS = {
     'Runcom kunde inte starta det grafiska gränssnittet: ': 'Runcom could not start the graphical interface: ',
     'Skriv. Kör. Se resultatet.': 'Write. Run. See the result.',
     'Kör i terminal (F6)': 'Run in terminal (F6)',
+    'Kör med sudo (F8)': 'Run with sudo (F8)',
     'Sök filnamn · dubbelklicka för att öppna': 'Search filenames · double-click to open',
     'UTDATA': 'OUTPUT',
     'Rensa': 'Clear',
@@ -610,6 +611,7 @@ class TerminalPanel(tk.Frame):
         self.escape = ''
         self.poll_id = None
         self.keep_sudo = tk.BooleanVar(value=False)
+        self.sudo_active = False
         self.sudo_state = tk.StringVar(value=tr('Sudo: inte aktivt'))
         self._sudo_control_buffer = ''
         toolbar = tk.Frame(self)
@@ -744,41 +746,63 @@ class TerminalPanel(tk.Frame):
             pass
         return 'break'
 
-    def toggle_sudo(self, fresh=False):
+    def _sudo_keeper(self):
+        refresh = ("import os, subprocess, sys, time; parent = os.getppid(); "
+                   "\nwhile os.getppid() == parent:\n"
+                   " time.sleep(45)\n"
+                   " if os.getppid() != parent: break\n"
+                   " if subprocess.call([sys.argv[1], '-n', '-v'], "
+                   "stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, "
+                   "stderr=subprocess.DEVNULL) != 0:\n"
+                   "  sys.stdout.write('\\x1dRUNCOM_SUDO_EXPIRED\\x1d'); sys.stdout.flush(); break\n")
+        return shlex.join([python_executable(), '-c', refresh, shutil.which('sudo')])
+
+    def authorize_sudo(self, fresh=False, after=None):
+        """Validate sudo in this PTY, keep it active, then optionally run a command."""
         if not shutil.which('sudo'):
             self.keep_sudo.set(False)
             messagebox.showerror(tr('Fel'), tr('Kommandot sudo hittades inte.'), parent=self)
-            return
-        if self.keep_sudo.get():
-            self._set_sudo_state(None)
-            # One unprivileged helper, bound to this shell; no password handling.
-            refresh = ("import os, subprocess, sys, time; parent = os.getppid(); "
-                       "\nwhile os.getppid() == parent:\n"
-                       " time.sleep(45)\n"
-                       " if os.getppid() != parent: break\n"
-                       " if subprocess.call([sys.argv[1], '-n', '-v'], "
-                       "stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, "
-                       "stderr=subprocess.DEVNULL) != 0:\n"
-                       "  sys.stdout.write('\\x1dRUNCOM_SUDO_EXPIRED\\x1d'); sys.stdout.flush(); break\n")
-            helper = shlex.join([python_executable(), '-c', refresh, shutil.which('sudo')])
-            validation = "sudo -k -v" if fresh else "sudo -v"
-            command = ("if " + validation + "; then printf '\\035RUNCOM_SUDO_ACTIVE\\035'; { "
-                       + helper + " & __runcom_sudo_keeper=$!; "
-                       "trap 'kill \"$__runcom_sudo_keeper\" 2>/dev/null' EXIT; }; "
-                       "else printf '\\035RUNCOM_SUDO_INACTIVE\\035'; fi")
-        else:
-            command = ('if [ -n "${__runcom_sudo_keeper:-}" ]; then '
+            return False
+        was_active = self.sudo_active is True
+        self._set_sudo_state(None)
+        stop_keeper = ('if [ -n "${__runcom_sudo_keeper:-}" ]; then '
                        'kill "$__runcom_sudo_keeper" 2>/dev/null; '
-                       'unset __runcom_sudo_keeper; fi; sudo -k')
+                       'wait "$__runcom_sudo_keeper" 2>/dev/null; '
+                       'unset __runcom_sudo_keeper; fi')
+        # -k and -v are separate on purpose: sudo -k -v may authenticate
+        # without updating the cached credential on current sudo versions.
+        validation = "sudo -k && sudo -v" if fresh else "sudo -v"
+        success = ("printf '\\035RUNCOM_SUDO_ACTIVE\\035'; { "
+                   + self._sudo_keeper() + " & __runcom_sudo_keeper=$!; "
+                   "trap 'kill \"$__runcom_sudo_keeper\" 2>/dev/null' EXIT; }")
+        if after:
+            success += "; " + after
+        command = (stop_keeper + "; if " + validation + "; then " + success
+                   + "; else printf '\\035RUNCOM_SUDO_INACTIVE\\035'; fi")
         if not self.command(command):
-            if self.keep_sudo.get():
-                self._set_sudo_state(False)
-            else:
-                self._set_sudo_state(True)
-        elif not self.keep_sudo.get():
-            self._set_sudo_state(False)
+            self._set_sudo_state(True if was_active else False)
+            return False
+        return True
+
+    def revoke_sudo(self):
+        command = ('if [ -n "${__runcom_sudo_keeper:-}" ]; then '
+                   'kill "$__runcom_sudo_keeper" 2>/dev/null; '
+                   'wait "$__runcom_sudo_keeper" 2>/dev/null; '
+                   'unset __runcom_sudo_keeper; fi; sudo -k')
+        if not self.command(command):
+            self._set_sudo_state(True if self.sudo_active is True else False)
+            return False
+        self._set_sudo_state(False)
+        return True
+
+    def toggle_sudo(self, fresh=False):
+        if self.keep_sudo.get():
+            self.authorize_sudo(fresh=fresh)
+        else:
+            self.revoke_sudo()
 
     def _set_sudo_state(self, active):
+        self.sudo_active = active
         if active is True:
             self.keep_sudo.set(True)
             self.sudo_state.set(tr('Sudo: aktivt under appsessionen'))
@@ -980,7 +1004,7 @@ class App(tk.Tk):
         if IS_WIN:
             tk.Button(bar, text=tr('Kör som admin'), command=self.run_as_admin).pack(side="left", padx=2)
         else:
-            tk.Button(bar, text=tr('Kör med sudo…'), command=self.run_with_sudo).pack(side="left", padx=2)
+            tk.Button(bar, text=tr('Kör med sudo (F8)'), command=self.run_with_sudo).pack(side="left", padx=2)
 
         self.tabs = ttk.Notebook(self)
         self.tabs.pack(fill="both", expand=True)
@@ -1070,9 +1094,9 @@ class App(tk.Tk):
 
     def startup_sudo(self):
         """Authenticate in the same PTY used for subsequent sudo commands."""
-        self.activate_sudo()
+        self.activate_sudo(fresh=True)
 
-    def activate_sudo(self, show_error=False):
+    def activate_sudo(self, show_error=False, fresh=False):
         """Request sudo in the app PTY; sudo itself owns the password prompt."""
         if IS_WIN or self._closing:
             return
@@ -1082,7 +1106,7 @@ class App(tk.Tk):
             return
         self.open_terminal()
         self.terminal.keep_sudo.set(True)
-        self.terminal.toggle_sudo(fresh=True)
+        self.terminal.toggle_sudo(fresh=fresh)
 
     def open_terminal(self):
         self.tabs.select(self.terminal)
@@ -1198,6 +1222,8 @@ class App(tk.Tk):
         self.bind("<F7>", lambda e: self._shortcut(self.open_terminal))
         self.bind("<F5>", lambda e: self._shortcut(self.run_in_app))
         self.bind("<F6>", lambda e: self._shortcut(self.run_in_terminal))
+        if not IS_WIN:
+            self.bind("<F8>", lambda e: self._shortcut(self.run_with_sudo))
 
     # ------------------------------------------------------------ hjälpare
     def _dirty(self):
@@ -1449,7 +1475,7 @@ class App(tk.Tk):
             return
         path = self.current
         if self._script_uses_sudo():
-            self.run_with_sudo()
+            self._run_in_builtin_terminal(elevated=False, prepared=True)
             return
         try:
             cmd = self._command_for(path)
@@ -1581,7 +1607,6 @@ class App(tk.Tk):
         if not self._prepare_run():
             return
         path = self.current
-        elevated = elevated or self._script_uses_sudo()
         try:
             if IS_WIN:
                 cmd = self._command_for(path, keep_open=True)
@@ -1638,7 +1663,12 @@ class App(tk.Tk):
             self._set_status('{0}{1}{2}'.format(tr('Startade '), path.name, tr(' som administratör')))
 
     def run_with_sudo(self):
-        if IS_WIN or not self._prepare_run():
+        if IS_WIN:
+            return
+        self._run_in_builtin_terminal(elevated=True)
+
+    def _run_in_builtin_terminal(self, elevated=False, prepared=False):
+        if not prepared and not self._prepare_run():
             return
         try:
             command = self._command_for(self.current)
@@ -1647,9 +1677,12 @@ class App(tk.Tk):
                 raise ValueError(tr('Kommandot sudo hittades inte.'))
             if command is None:
                 raise ValueError(tr('Filtypen stöds inte. Välj ett skal- eller Python-skript.'))
+            if elevated:
+                command = [sudo, '--', *command]
             self.open_terminal()
-            self.terminal.command('cd ' + shlex.quote(str(self.current.parent)) + ' && ' +
-                                  shlex.join([sudo, '--', *command]))
+            shell_command = ('cd ' + shlex.quote(str(self.current.parent)) + ' && '
+                             + shlex.join(command))
+            self.terminal.authorize_sudo(after=shell_command)
         except (OSError, ValueError) as error:
             messagebox.showerror(tr('Kunde inte köra skriptet'), str(error), parent=self)
 
