@@ -2,7 +2,7 @@ import json
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
-from pages_switcher import PagesClient
+from pages_switcher import PagesClient, identify_page
 
 
 def state(branch="main"):
@@ -10,12 +10,38 @@ def state(branch="main"):
 
 
 class PagesTests(unittest.TestCase):
+    def test_live_page_identification_requires_known_title(self):
+        self.assertEqual(identify_page('<title>Runcom — Underhåll / Maintenance</title>'), 'maintenance')
+        self.assertEqual(identify_page('<title>Runcom — Välj språk / Choose language</title>'), 'main')
+        self.assertIsNone(identify_page('<title>Server error</title>Underhåll'))
+
+    @patch('pages_switcher.urlopen')
+    def test_probe_has_no_token_and_build_failure_is_nonfatal(self, urlopen):
+        client = PagesClient('private-token')
+        response = urlopen.return_value.__enter__.return_value
+        response.status = 200
+        response.read.return_value = b'<title>Unknown</title>'
+        with patch.object(client, 'status', return_value=state()), patch.object(client, 'request', side_effect=ValueError('Build unavailable')):
+            data = client.detailed_status()
+        self.assertEqual(data['build_warning'], 'Build unavailable')
+        self.assertIsNone(data['live_mode'])
+        self.assertFalse(urlopen.call_args.args[0].has_header('Authorization'))
+
     def test_switch_both_directions(self):
         for current, target in [("main", "maintenance"), ("maintenance", "main")]:
             client = PagesClient("test")
-            with patch.object(client, "request", side_effect=[state(current), {}, state(target)]) as request:
+            with patch.object(client, "request", side_effect=[state(current), {}, state(target), {"status": "queued"}]) as request:
                 self.assertEqual(client.switch(current)["source"]["branch"], target)
                 self.assertEqual(request.call_args_list[1].args, ("PUT", {"source": {"branch": target, "path": "/"}}))
+                self.assertEqual(request.call_args_list[3].args, ("POST",))
+                self.assertEqual(request.call_args_list[3].kwargs, {"suffix": "/builds"})
+
+    def test_republish_preserves_branch_and_reports_failure(self):
+        client = PagesClient("test")
+        with patch.object(client, "request", side_effect=[state("maintenance"), ValueError("Forbidden")]) as request:
+            with self.assertRaisesRegex(ValueError, "byggbegäran misslyckades"):
+                client.rebuild("maintenance")
+            self.assertEqual(request.call_args.args, ("POST",))
 
     def test_changed_source_does_not_write(self):
         client = PagesClient("test")
