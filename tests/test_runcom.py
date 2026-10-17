@@ -6,7 +6,7 @@ import sys
 import tempfile
 import threading
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -33,6 +33,23 @@ class ApplicationTests(unittest.TestCase):
         launch.assert_not_called()
         app.on_close.assert_not_called()
         app._confirm_discard.assert_not_called()
+
+    def test_close_clears_terminal_before_stopping_it(self):
+        app = self.app()
+        app.proc = None
+        app.terminal = Mock()
+        app.after_cancel = Mock()
+        app._queue_after = 'queue-job'
+        app._stop_after = None
+        app.destroy = Mock()
+
+        runcom.App.on_close(app, confirm=False)
+
+        self.assertEqual(app.terminal.method_calls[:2], [
+            call.clear(focus=False),
+            call.close(),
+        ])
+        app.destroy.assert_called_once_with()
 
     def test_uninstall_preserves_unsaved_work_when_save_cancelled(self):
         app = self.app()
