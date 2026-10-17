@@ -2,12 +2,17 @@
 # Install the latest release into a persistent, per-user directory.
 set -euo pipefail
 REF=""
+APP_LANGUAGE=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --lang)
+      [ "$#" -ge 2 ] || { echo "Missing language" >&2; exit 2; }
+      case "$2" in sv|en) APP_LANGUAGE="$2" ;; *) echo "Language must be sv or en" >&2; exit 2 ;; esac
+      shift 2 ;;
     --ref)
-      [ "$#" -ge 2 ] && [ -n "$2" ] || { echo 'Usage: bash install.sh [--ref main|TAG]' >&2; exit 2; }
+      [ "$#" -ge 2 ] && [ -n "$2" ] || { echo 'Usage: bash install.sh [--ref main|TAG] [--lang sv|en]' >&2; exit 2; }
       REF="$2"; shift 2 ;;
-    --help|-h) echo 'Usage: bash install.sh [--ref main|TAG]'; exit 0 ;;
+    --help|-h) echo 'Usage: bash install.sh [--ref main|TAG] [--lang sv|en]'; exit 0 ;;
     *) echo "Unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -69,7 +74,7 @@ fi
 if [ -f "$SOURCE/requirements.txt" ]; then
   "$INSTALL_DIR/venv/bin/python" -m pip install -r "$SOURCE/requirements.txt"
 fi
-"$PYTHON" - "$INSTALL_DIR" "$SOURCE" <<'PY'
+"$PYTHON" - "$INSTALL_DIR" "$SOURCE" "$APP_LANGUAGE" <<'PY'
 import os, pathlib, shlex, sys, tempfile
 folder = pathlib.Path(sys.argv[1]).resolve()
 def replace_file(path, data, mode):
@@ -84,6 +89,10 @@ def replace_file(path, data, mode):
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
+if sys.argv[3] == 'en' and b'TRANSLATIONS' not in (pathlib.Path(sys.argv[2]) / 'runcom.py').read_bytes():
+    raise SystemExit('This version does not support English. Retry with --ref main.')
+if sys.argv[3]:
+    replace_file(folder / 'runcom-language', sys.argv[3].encode(), 0o600)
 replace_file(folder / 'runcom.py', (pathlib.Path(sys.argv[2]) / 'runcom.py').read_bytes(), 0o600)
 for name in ('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico'):
     asset = pathlib.Path(sys.argv[2]) / name

@@ -1,6 +1,6 @@
 # Runcom
 
-A small Swedish-language script editor for Linux, macOS and Windows. Uses Python 3.8+ and Tkinter; no third-party Python packages.
+A small Swedish/English script editor for Linux, macOS and Windows. Uses Python 3.8+ and Tkinter; no third-party Python packages.
 
 ## Start from source
 
@@ -31,10 +31,11 @@ Click **Hjälp** in the app or press **F1** for the detailed Swedish guide and F
 
 - Create a script with Ctrl+N, open with Ctrl+O, save with Ctrl+S, save as with Ctrl+Shift+S. macOS also supports Command.
 - Filter file names in the sidebar. Double-click a file or press Enter to open it.
-- F5 runs in the output panel. F6 runs in an external terminal; use this for interactive input.
+- F5 runs in the output panel. F6 runs in an external terminal. F7 opens the built-in command terminal.
+- The Terminal tab keeps a user shell open independently of the editor. Linux/macOS support interactive commands, input, Ctrl+C, history and tab completion through a PTY. This is a line terminal; use F6 for full-screen programs such as nano, vim or top. Windows provides a persistent cmd session with a separate input line; use F6 for interactive console programs. Restart terminal ends the old session and starts in the currently selected scripts folder. Closing Runcom ends its built-in shell.
 - Linux/macOS support shell scripts and Python files; existing shebangs are respected. Windows supports `.bat`, `.cmd`, `.ps1` and `.py`.
 - Stop terminates the running process group. Unsaved changes are checked before switching files or closing. Output is streamed even without a newline, and buffered output is bounded.
-- On Linux/macOS, **Kör med sudo…** opens a terminal and uses normal sudo authentication. Runcom does not collect or cache the password.
+- On Linux/macOS, **Kör med sudo…** runs in the built-in terminal and uses normal sudo authentication. **Keep sudo active for this session** runs `sudo -v` and refreshes the existing authorization with `sudo -n -v` every 45 seconds. Enter the password directly at the terminal prompt; Runcom does not store it. The computer’s sudo policy controls reuse and expiration; authentication cannot be reused across app restarts. Unchecking the option stops renewal and runs `sudo -k`. Closing or restarting the terminal stops renewal. No sudoers settings are changed.
 - Saves use an encoded temporary file followed by replacement, so encoding or write errors leave the original intact. External edits or deletions require confirmation before overwrite. Existing file permissions are preserved; only owner execution permission is added for a shebang.
 - Batch paths containing `%` are rejected with an explanation because cmd expands environment variables in those paths.
 
@@ -93,3 +94,5 @@ Create a fine-grained GitHub personal access token for `tvrdprijatelj/runcom` wi
 API contract: https://docs.github.com/en/rest/pages/pages#update-information-about-a-github-pages-site
 
 Tests: `python3 -m unittest discover -s tests -p test_pages_switcher.py -v`.
+
+The Swedish and English download pages install the matching app language. Commands pass `--lang sv|en` (Bash) or `-Language sv|en` (PowerShell). Download buttons provide language-specific installers for current main. The selection is stored beside the app in `runcom-language` and retained by updates without a language argument. Older releases without English support reject English installation; use current main. The detailed help guide remains in Swedish.

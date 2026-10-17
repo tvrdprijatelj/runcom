@@ -18,8 +18,9 @@ const script = fs.readFileSync(path.join(__dirname, '../download.js'), 'utf8');
         for (const version of ['main','release']) {
           elements.os.value=os; elements.version.value=version; elements.os.events.change();
           assert.ok(elements.prerequisites.textContent.length>10);
-          assert.equal(elements.installer.href,os==='windows'?'install.ps1':'install.sh');
+          assert.equal(elements.installer.href,`install_${lang}.${os==='windows'?'ps1':'sh'}`);
           const command = elements.command.textContent;
+          assert.ok(command.includes(os==='windows'?`-Language ${lang}`:`--lang ${lang}`));
           assert.match(command,/raw\.githubusercontent\.com\/tvrdprijatelj\/runcom\/main\/install\./);
           assert.equal(command.includes(os==='windows'?'-Ref main':'--ref main'),version==='main');
           if(os==='windows') assert.ok(command.includes('.\\runcom-install.ps1'));

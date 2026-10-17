@@ -37,7 +37,7 @@ const server = http.createServer((request,response)=>{
         await page.waitForFunction(()=>/kopierades|copied/.test(document.getElementById('status').textContent));
         const [download]=await Promise.all([page.waitForEvent('download'),page.locator('#installer').click()]);
         assert.equal(download.suggestedFilename(),'runcom-install.ps1');
-        assert.match(fs.readFileSync(await download.path(),'utf8'),/^param\(/);
+        assert.ok(fs.readFileSync(await download.path(),'utf8').includes(`-Language ${lang}`));
         await page.locator('#os').selectOption('arch');
         assert.match(await page.locator('#command').textContent(),/--ref main/);
         await page.locator('#version').selectOption('release');

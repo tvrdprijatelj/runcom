@@ -5,6 +5,7 @@ import os
 import queue
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from html.parser import HTMLParser
 import tkinter as tk
@@ -72,20 +73,28 @@ class PagesClient:
 
     def detailed_status(self):
         data = self.status()
-        try:
-            data["latest_build"] = self.request(suffix="/builds/latest")
-        except ValueError as error:
-            data["build_warning"] = str(error)
+        # Independent diagnostics run together so a slow public site does not
+        # delay the build request as well.
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            build = executor.submit(self.request, suffix="/builds/latest")
+            live = executor.submit(self.live_status)
+            try:
+                data["latest_build"] = build.result()
+            except ValueError as error:
+                data["build_warning"] = str(error)
+            data.update(live.result())
+        return data
+
+    def live_status(self):
         # Public probe deliberately uses no Authorization header.
         try:
             request = Request("https://tvrdprijatelj.github.io/runcom/?pages-check=" + str(time.time_ns()),
                               headers={"Cache-Control": "no-cache", "User-Agent": "Runcom-Pages-Switcher"})
             with urlopen(request, timeout=15) as response:
-                data["live_http"] = response.status
-                data["live_mode"] = identify_page(response.read(2_000_000).decode("utf-8", errors="replace"))
+                return {"live_http": response.status,
+                        "live_mode": identify_page(response.read(2_000_000).decode("utf-8", errors="replace"))}
         except (URLError, OSError, TimeoutError):
-            data["live_mode"] = None
-        return data
+            return {"live_mode": None}
 
 
 def identify_page(html):
@@ -199,10 +208,7 @@ class App(ttk.Frame):
             self.started = time.monotonic()
             self.progress.start(12)
             self.record("Begär byte: " + branch + " → " + self.target)
-            def change():
-                result = client.switch(branch)
-                return {**client.detailed_status(), "requested_build": result["requested_build"]}
-            self.run(change)
+            self.run(lambda: client.switch(branch))
 
     def rebuild(self):
         if not self.branch or self.pending:
@@ -213,10 +219,7 @@ class App(ttk.Frame):
         self.started = time.monotonic()
         self.progress.start(12)
         self.record("Begär ny publicering av " + branch)
-        def build():
-            result = client.rebuild(branch)
-            return {**client.detailed_status(), "requested_build": result["requested_build"]}
-        self.run(build)
+        self.run(lambda: client.rebuild(branch))
 
     def poll(self):
         try:
@@ -264,7 +267,7 @@ class App(ttk.Frame):
                         self.target = None
                         self.progress.stop()
                     else:
-                        self.auto_job = self.after(5000, self.read)
+                        self.auto_job = self.after(1000 if "requested_build" in data else 5000, self.read)
                 mode = "Vanlig webbplats" if self.branch == "main" else "Underhåll"
                 self.message.set(f"Vald källa: {mode}. GitHub-status: {data.get('status', 'okänd')}.\nEtt byte tar en stund att publicera. Läs status igen för att följa det.")
                 self.republish.configure(state="disabled" if self.target else "normal")

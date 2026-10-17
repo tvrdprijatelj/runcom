@@ -44,6 +44,67 @@ class GuiTests(unittest.TestCase):
             time.sleep(0.01)
         self.fail('Timed out waiting for GUI state')
 
+    def test_english_buttons_and_file_dialog(self):
+        self.app.on_close()
+        with patch.object(runcom, 'LANGUAGE', 'en'), patch.object(runcom, 'DEFAULT_DIR', Path(self.folder.name)):
+            self.app = runcom.App()
+            self.app.update()
+            self.assertEqual(self.app.btn_run['text'], '▶ Run here (F5)')
+            self.assertEqual(self.app.btn_stop['text'], '■ Stop')
+            self.assertEqual(self.app.tabs.tab(self.app.terminal, 'text'), 'Terminal')
+            self.assertEqual(runcom.tr('Håll sudo aktivt i sessionen'), 'Keep sudo active for this session')
+            with patch.object(runcom.simpledialog, 'askstring', return_value=None) as dialog:
+                self.app.new_file()
+            self.assertEqual(dialog.call_args[0][0], 'New script file')
+
+    @unittest.skipIf(os.name == 'nt', 'Unix PTY integration')
+    def test_terminal_tab_runs_commands_and_restart_closes_old_shell(self):
+        self.app.open_terminal()
+        panel = self.app.terminal
+        old = panel.session
+        panel.command("printf '\\nterminal-widget-ok\\n'" )
+        self.pump_until(lambda: '\nterminal-widget-ok\n' in panel.display.get('1.0', 'end'))
+        panel.restart()
+        self.assertIsNot(panel.session, old)
+        self.assertIsNotNone(old.proc.poll())
+
+    @unittest.skipIf(os.name == 'nt', 'Unix sudo session')
+    def test_sudo_session_uses_validation_and_invalidation_without_password(self):
+        fake_bin = Path(self.folder.name) / 'bin'
+        fake_bin.mkdir()
+        log = Path(self.folder.name) / 'sudo.log'
+        fake = fake_bin / 'sudo'
+        fake.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> ' + runcom.shlex.quote(str(log)) + '\n')
+        fake.chmod(0o700)
+        with patch.dict(os.environ, {'PATH': str(fake_bin) + os.pathsep + os.environ.get('PATH', '')}):
+            self.app.open_terminal()
+            panel = self.app.terminal
+            panel.keep_sudo.set(True)
+            panel.toggle_sudo()
+            self.pump_until(lambda: log.exists() and '-v' in log.read_text())
+            self.pump_until(lambda: panel.session.idle())
+            panel.keep_sudo.set(False)
+            panel.toggle_sudo()
+            self.pump_until(lambda: '-k' in log.read_text())
+        self.assertFalse(panel.keep_sudo.get())
+
+    @unittest.skipIf(os.name == 'nt', 'Unix sudo session')
+    def test_sudo_script_uses_existing_terminal(self):
+        script = Path(self.folder.name) / 'script with spaces.sh'
+        script.write_text("printf '\\nsudo-script-ok\\n'\n")
+        self.app.load_path(script)
+        fake_bin = Path(self.folder.name) / 'bin'
+        fake_bin.mkdir()
+        fake = fake_bin / 'sudo'
+        fake.write_text('#!/bin/sh\n[ "$1" = "--" ] && shift\nexec "$@"\n')
+        fake.chmod(0o700)
+        with patch.dict(os.environ, {'PATH': str(fake_bin) + os.pathsep + os.environ.get('PATH', '')}):
+            self.app.open_terminal()
+            original = self.app.terminal.session
+            self.app.run_with_sudo()
+            self.pump_until(lambda: '\nsudo-script-ok\n' in self.app.terminal.display.get('1.0', 'end'))
+            self.assertIs(self.app.terminal.session, original)
+
     def test_help_button_and_shortcut(self):
         self.assertEqual(self.app.btn_help['text'], 'Hjälp')
         self.assertTrue(self.app.bind('<F1>'))

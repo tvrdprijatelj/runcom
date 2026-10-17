@@ -18,10 +18,11 @@ function updateOS(){
   document.getElementById('prerequisites').textContent = prerequisites[os.value];
   const base = 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/';
   document.getElementById('command').textContent = win
-    ? `Invoke-WebRequest -UseBasicParsing '${base}install.ps1' -OutFile runcom-install.ps1\npowershell -ExecutionPolicy Bypass -File .\\runcom-install.ps1${main ? ' -Ref main' : ''}`
-    : `curl -fL '${base}install.sh' -o runcom-install.sh\nbash runcom-install.sh${main ? ' --ref main' : ''}`;
+    ? `Invoke-WebRequest -UseBasicParsing '${base}install.ps1' -OutFile runcom-install.ps1\npowershell -ExecutionPolicy Bypass -File .\\runcom-install.ps1${main ? ' -Ref main' : ''} -Language ${sv ? 'sv' : 'en'}`
+    : `curl -fL '${base}install.sh' -o runcom-install.sh\nbash runcom-install.sh${main ? ' --ref main' : ''} --lang ${sv ? 'sv' : 'en'}`;
   const link = document.getElementById('installer');
-  link.href = win ? 'install.ps1' : 'install.sh';
+  link.href = `install_${sv ? 'sv' : 'en'}.${win ? 'ps1' : 'sh'}`;
+  link.textContent = text('Ladda ner installerare (main)', 'Download installer (main)');
   link.download = win ? 'runcom-install.ps1' : 'runcom-install.sh';
   document.getElementById('launch').textContent = win
     ? text('Sök efter Runcom i Start-menyn eller använd skrivbordsgenvägen. Installationen visar också ett startkommando.', 'Find Runcom in the Start menu or use the desktop shortcut. The installer also prints a launch command.')

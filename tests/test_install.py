@@ -47,6 +47,13 @@ else:
     def run_installer(self, *args):
         return subprocess.run(['bash', str(ROOT/'install.sh'), *args], env=self.env, text=True, capture_output=True)
 
+    def test_language_is_saved_changed_and_preserved_on_update(self):
+        self.archive({'release/runcom.py': 'TRANSLATIONS = {}\n'})
+        for args, expected in [(('--lang', 'en'), 'en'), ((), 'en'), (('--lang', 'sv'), 'sv')]:
+            result = self.run_installer(*args)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual((self.install / 'runcom-language').read_text(), expected)
+
     def test_install_survives_temp_cleanup_and_can_update(self):
         for output in ('installed', 'updated'):
             self.archive({'release/runcom.py': 'print('+repr(output)+')\n'})

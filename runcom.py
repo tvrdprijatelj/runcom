@@ -2,7 +2,7 @@
 """Runcom – skapa, öppna, redigera och kör skriptfiler.
 
 Fungerar på Linux, macOS och Windows.
-  Linux/macOS: skal- och Python-skript. Sudo körs i en separat terminal.
+  Linux/macOS: skal- och Python-skript. Sudo körs i den inbyggda terminalsessionen.
   Windows:     .bat/.cmd och .ps1. "Kör som admin" visar Windows egen UAC-ruta.
 
 Start:  python3 runcom.py   (Windows: py runcom.py)
@@ -24,7 +24,7 @@ import webbrowser
 import tkinter as tk
 import tkinter.font as tkfont
 from pathlib import Path
-from tkinter import filedialog, messagebox, simpledialog
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 IS_WIN = os.name == "nt"
 IS_MAC = sys.platform == "darwin"
@@ -38,10 +38,119 @@ DEFAULT_DIR = Path.home() / "skript"
 DEFAULT_EXT = ".bat" if IS_WIN else ".sh"
 HELP_URL = "https://tvrdprijatelj.github.io/runcom/help.html"
 
+def installed_language():
+    try:
+        value = Path(__file__).with_name("runcom-language").read_text(encoding="utf-8").strip()
+    except OSError:
+        value = "sv"
+    return value if value in ("sv", "en") else "sv"
+
+
+LANGUAGE = installed_language()
+TRANSLATIONS = {
+    'Windows-kommandon: skriv på raden och tryck Enter. Interaktiva konsolprogram körs med F6.': 'Windows commands: type on the input line and press Enter. Use F6 for interactive console programs.',
+    'Skript': 'Scripts',
+    'Terminal': 'Terminal',
+    'Terminal (F7)': 'Terminal (F7)',
+    'Terminalen är stängd. Starta om den.': 'The terminal is closed. Restart it.',
+    'Starta om terminal': 'Restart terminal',
+    'Håll sudo aktivt i sessionen': 'Keep sudo active for this session',
+    'Kommandoterminal · Ctrl+C avbryter · Ctrl+Shift+V klistrar in. Helskärmsprogram körs med F6.': 'Command terminal · Ctrl+C interrupts · Ctrl+Shift+V pastes. Use F6 for full-screen programs.',
+    'Kunde inte starta terminalen': 'Could not start the terminal',
+    'Ny terminalsession': 'New terminal session',
+    'Terminalen är upptagen': 'Terminal is busy',
+    'Avsluta det pågående kommandot först.': 'Finish the current command first.',
+    'Klistra in flera rader': 'Paste multiple lines',
+    'Inklistrade radbrytningar kan köra kommandon direkt. Fortsätt?': 'Pasted newlines can run commands immediately. Continue?',
+    'Terminalsessionen avslutades. Starta om för att fortsätta.': 'The terminal session ended. Restart it to continue.',
+
+    '@echo off\nrem Skriv dina kommandon här\necho Hej fran %COMPUTERNAME%!\n': '@echo off\nrem Write your commands here\necho Hello from %COMPUTERNAME%!\n',
+    '# Skriv dina kommandon här\nWrite-Host "Hej från $env:COMPUTERNAME!"\n': '# Write your commands here\nWrite-Host "Hello from $env:COMPUTERNAME!"\n',
+    'set -euo pipefail\n\n# Skriv dina kommandon här\necho "Hej från $(hostname)!"\n': 'set -euo pipefail\n\n# Write your commands here\necho "Hello from $(hostname)!"\n',
+    '#!/usr/bin/env python3\n\nprint("Hej från Runcom!")\n': '#!/usr/bin/env python3\n\nprint("Hello from Runcom!")\n',
+    'Kunde inte öppna hjälpen': 'Could not open help',
+    '(ingen fil)': '(no file)',
+    'Osparade ändringar': 'Unsaved changes',
+    'Vill du spara ändringarna först?': 'Do you want to save your changes first?',
+    'backup.bat, backup.ps1 eller hello.py': 'backup.bat, backup.ps1 or hello.py',
+    'backup.sh eller hello.py': 'backup.sh or hello.py',
+    'Ny skriptfil': 'New script file',
+    'Filen togs bort': 'File deleted',
+    'Kör…': 'Running…',
+    "; echo; printf '[Klart - tryck Enter för att stänga] '; read -r _x": "; echo; printf '[Done - press Enter to close] '; read -r _x",
+    'Skriptets shebang saknar ett program.': 'The script shebang is missing an interpreter.',
+    'Hjälp': 'Help (Swedish)',
+    'Spara som…': 'Save as…',
+    'Ta bort': 'Delete',
+    'Byt mapp…': 'Change folder…',
+    '▶ Kör här (F5)': '▶ Run here (F5)',
+    '■ Stoppa': '■ Stop',
+    'Redo · Skapa en fil med Ctrl+N eller öppna med Ctrl+O': 'Ready · Create a file with Ctrl+N or open with Ctrl+O',
+    'Öppna hjälpen manuellt i din webbläsare:\n\n': 'Open the help manually in your browser:\n\n',
+    'Filnamn (t.ex. ': 'Filename (e.g. ',
+    'Finns redan': 'Already exists',
+    'Skapade ': 'Created ',
+    'Öppna skriptfil': 'Open script file',
+    'Öppnade ': 'Opened ',
+    'Sparade ': 'Saved ',
+    'Spara som': 'Save as',
+    'Välj mapp': 'Choose folder',
+    'Filtypen stöds inte. Använd ett skal- eller Python-skript (Windows: .bat, .cmd, .ps1 eller .py).\n': 'Unsupported file type. Use a shell or Python script (Windows: .bat, .cmd, .ps1 or .py).\n',
+    '\n[Stoppad av användaren]\n': '\n[Stopped by the user]\n',
+    'Filtypen stöds inte. Välj ett skal- eller Python-skript.': 'Unsupported file type. Choose a shell or Python script.',
+    'Admin-körningen avbröts eller misslyckades': 'Administrator launch was cancelled or failed',
+    'Byt namn på batchfilen eller mappen: %, radbrytningar och citattecken stöds inte.': 'Rename the batch file or folder: %, newlines and quotes are not supported.',
+    'PowerShell hittades inte.': 'PowerShell was not found.',
+    'Kunde inte skapa skriptmappen': 'Could not create the scripts folder',
+    'Ny (': 'New (',
+    'Öppna… (': 'Open… (',
+    'Spara (': 'Save (',
+    ' finns redan i mappen.': ' already exists in the folder.',
+    'Fel': 'Error',
+    'Kunde inte öppna': 'Could not open',
+    'Kunde inte spara': 'Could not save',
+    'Ta bort ': 'Delete ',
+    ' permanent?': ' permanently?',
+    'Kunde inte köra skriptet': 'Could not run the script',
+    'Kommandot sudo hittades inte.': 'The sudo command was not found.',
+    'Startade ': 'Started ',
+    ' som administratör': ' as administrator',
+    'Runcom kunde inte starta det grafiska gränssnittet: ': 'Runcom could not start the graphical interface: ',
+    'Skriv. Kör. Se resultatet.': 'Write. Run. See the result.',
+    'Kör i terminal (F6)': 'Run in terminal (F6)',
+    'Sök filnamn · dubbelklicka för att öppna': 'Search filenames · double-click to open',
+    'UTDATA': 'OUTPUT',
+    'Rensa': 'Clear',
+    'Behöver skriptet inmatning? Använd Kör i terminal.': 'Does your script need input? Use Run in terminal.',
+    'Kunde inte läsa mappen: ': 'Could not read the folder: ',
+    'Filen innehåller tecken som inte finns i batchfilernas teckentabell (': 'The file contains characters not supported by the batch encoding (',
+    '). Ta bort dem eller använd en .ps1-fil.': '). Remove them or use a .ps1 file.',
+    'Kunde inte starta: ': 'Could not start: ',
+    'Filtypen stöds inte': 'Unsupported file type',
+    'Använd .bat, .cmd, .ps1 eller .py.': 'Use .bat, .cmd, .ps1 or .py.',
+    ' i ett konsolfönster': ' in a console window',
+    'Ingen terminal hittades': 'No terminal found',
+    'Installera t.ex. gnome-terminal, konsole eller xterm, eller använd ”Kör här”.': 'Install gnome-terminal, konsole or xterm, or use Run here.',
+    'Kör som admin': 'Run as administrator',
+    'Kör med sudo…': 'Run with sudo…',
+    'Filen har ändrats': 'File changed',
+    'Filen har ändrats eller tagits bort utanför Runcom.\nVill du skriva över den med innehållet i editorn?': 'The file was changed or deleted outside Runcom.\nDo you want to overwrite it with the editor contents?',
+    'Kunde inte läsa utdata: ': 'Could not read output: ',
+    ' i Terminal': ' in Terminal',
+    '\n[Avslutades med kod ': '\n[Finished with exit code ',
+    'Klar (kod ': 'Done (exit code ',
+    ' i ': ' in ',
+}
+
+
+def tr(text):
+    return TRANSLATIONS.get(text, text) if LANGUAGE == "en" else text
+
+
 SHEBANG = "#!/usr/bin/env bash\n"
-TPL_UNIX = SHEBANG + 'set -euo pipefail\n\n# Skriv dina kommandon här\necho "Hej från $(hostname)!"\n'
-TPL_BAT = "@echo off\nrem Skriv dina kommandon här\necho Hej fran %COMPUTERNAME%!\n"
-TPL_PS1 = '# Skriv dina kommandon här\nWrite-Host "Hej från $env:COMPUTERNAME!"\n'
+TPL_UNIX = SHEBANG + tr('set -euo pipefail\n\n# Skriv dina kommandon här\necho "Hej från $(hostname)!"\n')
+TPL_BAT = tr('@echo off\nrem Skriv dina kommandon här\necho Hej fran %COMPUTERNAME%!\n')
+TPL_PS1 = tr('# Skriv dina kommandon här\nWrite-Host "Hej från $env:COMPUTERNAME!"\n')
 
 # Linux: (program, argument som föregår kommandot)
 TERMINALS = [
@@ -83,7 +192,7 @@ def file_encoding(path):
 def template_for(name):
     ext = Path(name).suffix.lower()
     if ext == ".py":
-        return '#!/usr/bin/env python3\n\nprint("Hej från Runcom!")\n'
+        return tr('#!/usr/bin/env python3\n\nprint("Hej från Runcom!")\n')
     if ext == ".ps1":
         return TPL_PS1
     if ext in (".bat", ".cmd"):
@@ -136,7 +245,7 @@ def script_command(path, keep_open=False):
     if IS_WIN:
         if ext in (".bat", ".cmd"):
             if any(char in str(path) for char in ('%', '\r', '\n', '"')):
-                raise ValueError("Byt namn på batchfilen eller mappen: %, radbrytningar och citattecken stöds inte.")
+                raise ValueError(tr('Byt namn på batchfilen eller mappen: %, radbrytningar och citattecken stöds inte.'))
             exe = os.environ.get("COMSPEC", "cmd.exe")
             # cmd /s requires an extra quote pair; list2cmdline on the whole
             # command would escape quotes using rules cmd does not understand.
@@ -145,7 +254,7 @@ def script_command(path, keep_open=False):
         if ext == ".ps1":
             ps = shutil.which("pwsh") or shutil.which("powershell")
             if not ps:
-                raise ValueError("PowerShell hittades inte.")
+                raise ValueError(tr('PowerShell hittades inte.'))
             args = [ps, "-NoProfile"]
             if keep_open:
                 args.append("-NoExit")
@@ -160,11 +269,339 @@ def script_command(path, keep_open=False):
     if first.startswith("#!"):
         interpreter = shlex.split(first[2:])
         if not interpreter:
-            raise ValueError("Skriptets shebang saknar ett program.")
+            raise ValueError(tr('Skriptets shebang saknar ett program.'))
         return interpreter + [str(path)]
     if ext in (".sh", ".bash"):
         return ["bash", str(path)]
     return None
+
+
+class TerminalSession:
+    """Persistent user shell; Unix input goes directly to a real pseudo-terminal."""
+    def __init__(self, folder, env):
+        self.events = queue.Queue(maxsize=256)
+        self.closed = threading.Event()
+        self.fd = None
+        if IS_WIN:
+            self.proc = subprocess.Popen(
+                [os.environ.get('COMSPEC', 'cmd.exe'), '/d', '/q'], cwd=str(folder),
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                env=env, creationflags=NO_WINDOW)
+        else:
+            import pty
+            master, slave = pty.openpty()
+            env = dict(env, TERM='dumb', PS1='$ ', PROMPT_COMMAND='')
+            shell = shutil.which('bash') or '/bin/sh'
+            try:
+                self.proc = subprocess.Popen(
+                    [python_executable(), str(Path(__file__).resolve()), '--terminal-child', shell],
+                    cwd=str(folder), stdin=slave, stdout=slave, stderr=slave,
+                    env=env, start_new_session=True, close_fds=True)
+            except BaseException:
+                os.close(master)
+                raise
+            finally:
+                os.close(slave)
+            self.fd = master
+        self.thread = threading.Thread(target=self._read, daemon=True)
+        self.thread.start()
+
+    def _emit(self, kind, value):
+        while not self.closed.is_set():
+            try:
+                self.events.put((kind, value), timeout=0.1)
+                return
+            except queue.Full:
+                pass
+
+    def _read(self):
+        decoder = codecs.getincrementaldecoder(OEM if IS_WIN else 'utf-8')(errors='replace')
+        try:
+            source = self.proc.stdout.fileno() if IS_WIN else self.fd
+            while not self.closed.is_set():
+                data = os.read(source, 4096)
+                if not data:
+                    break
+                self._emit('text', decoder.decode(data))
+        except OSError:
+            pass  # Unix PTYs report EIO when the shell exits.
+        finally:
+            self._emit('text', decoder.decode(b'', final=True))
+            self._emit('done', self.proc.wait())
+
+    def send(self, text):
+        if self.closed.is_set() or self.proc.poll() is not None:
+            raise OSError(tr('Terminalen är stängd. Starta om den.'))
+        data = text.encode(OEM if IS_WIN else 'utf-8')
+        if IS_WIN:
+            self.proc.stdin.write(data)
+            self.proc.stdin.flush()
+        else:
+            while data:
+                data = data[os.write(self.fd, data):]
+
+    def idle(self):
+        if self.proc.poll() is not None:
+            return False
+        if IS_WIN:
+            return True
+        try:
+            return os.tcgetpgrp(self.fd) in (0, self.proc.pid)
+        except OSError:
+            return False
+
+    def resize(self, rows, columns):
+        if not IS_WIN and not self.closed.is_set():
+            import fcntl
+            import struct
+            import termios
+            try:
+                fcntl.ioctl(self.fd, termios.TIOCSWINSZ, struct.pack('HHHH', rows, columns, 0, 0))
+            except OSError:
+                pass
+
+    def close(self):
+        if self.closed.is_set():
+            return
+        self.closed.set()
+        if IS_WIN:
+            if self.proc.poll() is None:
+                subprocess.run(['taskkill', '/PID', str(self.proc.pid), '/T', '/F'],
+                               capture_output=True, creationflags=NO_WINDOW)
+            self.proc.stdin.close()
+        else:
+            try:
+                foreground = os.tcgetpgrp(self.fd)
+                if (foreground > 0 and foreground != self.proc.pid
+                        and os.getsid(foreground) == self.proc.pid):
+                    os.killpg(foreground, signal.SIGHUP)
+            except (OSError, ProcessLookupError):
+                pass
+            try:
+                os.killpg(self.proc.pid, signal.SIGHUP)
+            except ProcessLookupError:
+                pass
+            os.close(self.fd)
+        try:
+            self.proc.wait(timeout=0.5)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            self.proc.wait(timeout=1)
+        if IS_WIN:
+            self.proc.stdout.close()
+
+
+class TerminalPanel(tk.Frame):
+    def __init__(self, parent, app):
+        super().__init__(parent)
+        self.app = app
+        self.session = None
+        self.escape = ''
+        self.poll_id = None
+        self.keep_sudo = tk.BooleanVar(value=False)
+        toolbar = tk.Frame(self)
+        toolbar.pack(fill='x')
+        tk.Button(toolbar, text=tr('Starta om terminal'), command=self.restart).pack(side='left')
+        if not IS_WIN:
+            tk.Checkbutton(toolbar, text=tr('Håll sudo aktivt i sessionen'),
+                           variable=self.keep_sudo, command=self.toggle_sudo).pack(side='left')
+        hint = ('Windows-kommandon: skriv på raden och tryck Enter. Interaktiva konsolprogram körs med F6.' if IS_WIN else
+                'Kommandoterminal · Ctrl+C avbryter · Ctrl+Shift+V klistrar in. Helskärmsprogram körs med F6.')
+        tk.Label(self, text=tr(hint),
+                 anchor='w', wraplength=750).pack(fill='x', padx=8)
+        body = tk.Frame(self)
+        body.pack(fill='both', expand=True)
+        scroll = tk.Scrollbar(body)
+        scroll.pack(side='right', fill='y')
+        self.display = tk.Text(body, state='disabled', wrap='char', font=app.mono,
+                               bg='#111b29', fg='#e4ecf7', insertbackground='#77c7ff',
+                               yscrollcommand=scroll.set, takefocus=True)
+        self.display.pack(fill='both', expand=True)
+        scroll.config(command=self.display.yview)
+        self.display.mark_set('terminal_cursor', '1.0')
+        self.display.mark_gravity('terminal_cursor', 'right')
+        if IS_WIN:
+            self.line = tk.Entry(self, bg='#111b29', fg='#e4ecf7', insertbackground='white')
+            self.line.pack(fill='x')
+            self.line.bind('<Return>', self.send_line)
+        else:
+            self.display.bind('<KeyPress>', self.key)
+            self.display.bind('<Control-Shift-V>', self.paste)
+            self.display.bind('<Control-Shift-v>', self.paste)
+            self.display.bind('<<Paste>>', self.paste)
+            self.display.bind('<Button-2>', lambda e: 'break')
+
+    def start(self):
+        if self.session is None:
+            try:
+                self.session = TerminalSession(self.app.folder, self.app._run_env())
+            except OSError as error:
+                messagebox.showerror(tr('Kunde inte starta terminalen'), str(error), parent=self)
+                return False
+            self.poll_id = self.after(30, self.poll)
+        return self.session.proc.poll() is None
+
+    def focus_terminal(self):
+        (self.line if IS_WIN else self.display).focus_set()
+
+    def restart(self):
+        self.close()
+        self.keep_sudo.set(False)
+        self.escape = ''
+        self.render('\n' + tr('Ny terminalsession') + '\n')
+        self.start()
+        self.focus_terminal()
+
+    def close(self):
+        if self.poll_id is not None:
+            self.after_cancel(self.poll_id)
+            self.poll_id = None
+        if self.session is not None:
+            self.session.close()
+            self.session = None
+
+    def send(self, text):
+        try:
+            if self.start():
+                self.session.send(text)
+        except OSError as error:
+            messagebox.showerror(tr('Fel'), str(error), parent=self)
+
+    def command(self, command):
+        if not self.start():
+            return False
+        if not self.session.idle():
+            messagebox.showinfo(tr('Terminalen är upptagen'),
+                                tr('Avsluta det pågående kommandot först.'), parent=self)
+            return False
+        if IS_WIN:
+            self.render(command + '\r\n')
+        self.send(command + ('\r\n' if IS_WIN else '\n'))
+        self.focus_terminal()
+        return True
+
+    def send_line(self, _event=None):
+        text = self.line.get()
+        self.line.delete(0, 'end')
+        self.render(text + '\r\n')
+        self.send(text + '\r\n')
+        return 'break'
+
+    def key(self, event):
+        if event.state & 4 and event.keysym.lower() == 'c' and event.state & 1:
+            try:
+                self.clipboard_clear()
+                self.clipboard_append(self.display.get('sel.first', 'sel.last'))
+            except tk.TclError:
+                pass
+            return 'break'
+        keys = {'Return': '\r', 'BackSpace': '\x7f', 'Tab': '\t', 'Escape': '\x1b',
+                'Up': '\x1b[A', 'Down': '\x1b[B', 'Right': '\x1b[C', 'Left': '\x1b[D',
+                'Home': '\x01', 'End': '\x05', 'Delete': '\x1b[3~'}
+        text = keys.get(event.keysym, event.char)
+        if text:
+            self.send(text)
+        return 'break'
+
+    def paste(self, _event=None):
+        try:
+            text = self.clipboard_get().replace('\r\n', '\n').replace('\r', '\n')
+            if '\n' in text:
+                if not messagebox.askokcancel(tr('Klistra in flera rader'),
+                        tr('Inklistrade radbrytningar kan köra kommandon direkt. Fortsätt?'), parent=self):
+                    return 'break'
+            self.send(text)
+        except tk.TclError:
+            pass
+        return 'break'
+
+    def toggle_sudo(self):
+        if not shutil.which('sudo'):
+            self.keep_sudo.set(False)
+            messagebox.showerror(tr('Fel'), tr('Kommandot sudo hittades inte.'), parent=self)
+            return
+        if self.keep_sudo.get():
+            # One unprivileged helper, bound to this shell; no password handling.
+            refresh = ("import os, subprocess, sys, time; parent = os.getppid(); "
+                       "\nwhile os.getppid() == parent:\n"
+                       " time.sleep(45)\n"
+                       " if os.getppid() != parent: break\n"
+                       " if subprocess.call([sys.argv[1], '-n', '-v'], "
+                       "stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, "
+                       "stderr=subprocess.DEVNULL) != 0: break\n")
+            helper = shlex.join([python_executable(), '-c', refresh, shutil.which('sudo')])
+            command = ("sudo -v && { " + helper + " & __runcom_sudo_keeper=$!; "
+                       "trap 'kill \"$__runcom_sudo_keeper\" 2>/dev/null' EXIT; }")
+        else:
+            command = ('if [ -n "${__runcom_sudo_keeper:-}" ]; then '
+                       'kill "$__runcom_sudo_keeper" 2>/dev/null; '
+                       'unset __runcom_sudo_keeper; fi; sudo -k')
+        if not self.command(command):
+            self.keep_sudo.set(not self.keep_sudo.get())
+
+    def poll(self):
+        self.poll_id = None
+        try:
+            for _ in range(100):
+                kind, value = self.session.events.get_nowait()
+                if kind == 'text':
+                    self.render(value)
+                else:
+                    self.render('\n' + tr('Terminalsessionen avslutades. Starta om för att fortsätta.') + '\n')
+                    self.keep_sudo.set(False)
+                    return
+        except queue.Empty:
+            pass
+        columns = max(20, self.display.winfo_width() // max(1, self.app.mono.measure('M')))
+        rows = max(4, self.display.winfo_height() // max(1, self.app.mono.metrics('linespace')))
+        self.session.resize(rows, columns)
+        self.poll_id = self.after(30, self.poll)
+
+    def render(self, text):
+        # A bounded line terminal: CR redraw, backspace and erase-to-end-of-line.
+        # TERM=dumb avoids advertising full-screen terminal capabilities.
+        widget = self.display
+        widget.config(state='normal')
+        for char in text:
+            if self.escape:
+                self.escape += char
+                if len(self.escape) == 2 and char != '[':
+                    self.escape = ''
+                elif len(self.escape) > 2 and ('@' <= char <= '~'):
+                    if char == 'K':
+                        widget.delete('terminal_cursor', 'terminal_cursor lineend')
+                    self.escape = ''
+                elif len(self.escape) > 64:
+                    self.escape = ''
+                continue
+            if char == '\x1b':
+                self.escape = char
+            elif char == '\r':
+                widget.mark_set('terminal_cursor', 'terminal_cursor linestart')
+            elif char == '\n':
+                widget.mark_set('terminal_cursor', 'terminal_cursor lineend')
+                widget.insert('terminal_cursor', '\n')
+            elif char == '\b':
+                if widget.compare('terminal_cursor', '>', 'terminal_cursor linestart'):
+                    widget.mark_set('terminal_cursor', 'terminal_cursor -1c')
+            elif char >= ' ' or char == '\t':
+                if widget.compare('terminal_cursor', '<', 'terminal_cursor lineend'):
+                    widget.delete('terminal_cursor', 'terminal_cursor +1c')
+                widget.insert('terminal_cursor', char)
+        size = widget.count('1.0', 'end-1c', 'chars')
+        if size and size[0] > 100_000:
+            widget.delete('1.0', '1.0+20000c')
+        widget.see('terminal_cursor')
+        widget.config(state='disabled')
+
+
+def terminal_child(shell):
+    """Acquire the PTY after setsid, without preexec_fn in the threaded GUI."""
+    import fcntl
+    import termios
+    fcntl.ioctl(0, termios.TIOCSCTTY, 0)
+    args = [shell, '--noprofile', '--norc', '-i'] if Path(shell).name == 'bash' else [shell, '-i']
+    os.execv(shell, args)
 
 
 class App(tk.Tk):
@@ -191,7 +628,7 @@ class App(tk.Tk):
         try:
             self.folder.mkdir(parents=True, exist_ok=True)
         except OSError as error:
-            messagebox.showerror("Kunde inte skapa skriptmappen", str(error), parent=self)
+            messagebox.showerror(tr('Kunde inte skapa skriptmappen'), str(error), parent=self)
             self.folder = Path.home()
         self.current = None  # Path eller None
         self.proc = None
@@ -227,20 +664,22 @@ class App(tk.Tk):
         header.pack(fill="x")
         tk.Label(header, text="runcom", font=("TkDefaultFont", 23, "bold"),
                  bg="#101722", fg="#77c7ff").pack(side="left")
-        tk.Label(header, text="Skriv. Kör. Se resultatet.", bg="#101722",
+        tk.Label(header, text=tr('Skriv. Kör. Se resultatet.'), bg="#101722",
                  fg="#a5b5cc", padx=20).pack(side="left")
-        self.btn_help = tk.Button(header, text="Hjälp", command=self.open_help,
+        self.btn_help = tk.Button(header, text=tr('Hjälp'), command=self.open_help,
                                   bg="#23334a", fg="#e4ecf7")
         self.btn_help.pack(side="right")
+        self.btn_terminal = tk.Button(header, text=tr('Terminal (F7)'), command=self.open_terminal)
+        self.btn_terminal.pack(side="right", padx=6)
         bar = tk.Frame(self, padx=12, pady=6)
         bar.pack(fill="x")
         buttons = [
-            (f"Ny ({MOD}+N)", self.new_file),
-            (f"Öppna… ({MOD}+O)", self.open_file),
-            (f"Spara ({MOD}+S)", self.save),
-            ("Spara som…", self.save_as),
-            ("Ta bort", self.delete_file),
-            ("Byt mapp…", self.change_folder),
+            ('{0}{1}+N)'.format(tr('Ny ('), MOD), self.new_file),
+            ('{0}{1}+O)'.format(tr('Öppna… ('), MOD), self.open_file),
+            ('{0}{1}+S)'.format(tr('Spara ('), MOD), self.save),
+            (tr('Spara som…'), self.save_as),
+            (tr('Ta bort'), self.delete_file),
+            (tr('Byt mapp…'), self.change_folder),
         ]
         for text, cmd in buttons:
             tk.Button(bar, text=text, command=cmd).pack(side="left", padx=2)
@@ -248,20 +687,27 @@ class App(tk.Tk):
         runbar = tk.Frame(self, padx=12, pady=8)
         runbar.pack(fill="x")
         bar = runbar
-        self.btn_run = tk.Button(bar, text="▶ Kör här (F5)", command=self.run_in_app,
+        self.btn_run = tk.Button(bar, text=tr('▶ Kör här (F5)'), command=self.run_in_app,
                                  bg="#2e7d32", fg="white", activebackground="#1b5e20")
         self.btn_run.pack(side="left", padx=2)
-        self.btn_stop = tk.Button(bar, text="■ Stoppa", command=self.stop, state="disabled")
+        self.btn_stop = tk.Button(bar, text=tr('■ Stoppa'), command=self.stop, state="disabled")
         self.btn_stop.pack(side="left", padx=2)
-        tk.Button(bar, text="Kör i terminal (F6)", command=self.run_in_terminal).pack(side="left", padx=2)
+        tk.Button(bar, text=tr('Kör i terminal (F6)'), command=self.run_in_terminal).pack(side="left", padx=2)
 
         tk.Frame(bar, width=20).pack(side="left")
         if IS_WIN:
-            tk.Button(bar, text="Kör som admin", command=self.run_as_admin).pack(side="left", padx=2)
+            tk.Button(bar, text=tr('Kör som admin'), command=self.run_as_admin).pack(side="left", padx=2)
         else:
-            tk.Button(bar, text="Kör med sudo…", command=self.run_with_sudo).pack(side="left", padx=2)
+            tk.Button(bar, text=tr('Kör med sudo…'), command=self.run_with_sudo).pack(side="left", padx=2)
 
-        main = tk.PanedWindow(self, orient="horizontal", sashwidth=5)
+        self.tabs = ttk.Notebook(self)
+        self.tabs.pack(fill="both", expand=True)
+        script_tab = tk.Frame(self.tabs)
+        self.tabs.add(script_tab, text=tr('Skript'))
+        self.terminal = TerminalPanel(self.tabs, self)
+        self.tabs.add(self.terminal, text=tr('Terminal'))
+        self.tabs.bind('<<NotebookTabChanged>>', self._tab_changed)
+        main = tk.PanedWindow(script_tab, orient="horizontal", sashwidth=5)
         main.pack(fill="both", expand=True)
 
         # Vänster: fillista
@@ -276,7 +722,7 @@ class App(tk.Tk):
         search = tk.Entry(left, textvariable=self.search, bg="#101722", fg="#e4ecf7",
                           insertbackground="white", relief="flat")
         search.pack(fill="x", padx=8, pady=8, before=lf)
-        tk.Label(left, text="Sök filnamn · dubbelklicka för att öppna", fg="#a5b5cc",
+        tk.Label(left, text=tr('Sök filnamn · dubbelklicka för att öppna'), fg="#a5b5cc",
                  font=("TkDefaultFont", 9)).pack(fill="x", before=search)
         self.search.trace_add("write", lambda *_: self.refresh_list())
         self.listbox = tk.Listbox(lf, yscrollcommand=sb.set, exportselection=False, activestyle="none",
@@ -311,9 +757,9 @@ class App(tk.Tk):
         of = tk.Frame(right)
         outputbar = tk.Frame(of)
         outputbar.pack(fill="x")
-        tk.Label(outputbar, text="UTDATA", anchor="w", padx=10).pack(side="left")
-        tk.Button(outputbar, text="Rensa", command=self.clear_output).pack(side="right")
-        tk.Label(outputbar, text="Behöver skriptet inmatning? Använd Kör i terminal.",
+        tk.Label(outputbar, text=tr('UTDATA'), anchor="w", padx=10).pack(side="left")
+        tk.Button(outputbar, text=tr('Rensa'), command=self.clear_output).pack(side="right")
+        tk.Label(outputbar, text=tr('Behöver skriptet inmatning? Använd Kör i terminal.'),
                  fg="#a5b5cc", font=("TkDefaultFont", 9)).pack(side="left", padx=12)
         osb = tk.Scrollbar(of)
         osb.pack(side="right", fill="y")
@@ -326,8 +772,18 @@ class App(tk.Tk):
         right.add(of, minsize=80)
 
         self.status = tk.Label(self, anchor="w", padx=14, pady=8, bg="#101722", fg="#a5b5cc",
-                               text="Redo · Skapa en fil med Ctrl+N eller öppna med Ctrl+O")
+                               text=tr('Redo · Skapa en fil med Ctrl+N eller öppna med Ctrl+O'))
         self.status.pack(fill="x", side="bottom")
+
+    def _tab_changed(self, _event=None):
+        if self.tabs.select() == str(self.terminal):
+            self.terminal.start()
+            self.terminal.focus_terminal()
+
+    def open_terminal(self):
+        self.tabs.select(self.terminal)
+        self.terminal.start()
+        self.terminal.focus_terminal()
 
     def open_help(self):
         local = Path(__file__).resolve().with_name("help.html")
@@ -337,8 +793,8 @@ class App(tk.Tk):
                 return
         except (OSError, webbrowser.Error):
             pass
-        messagebox.showerror("Kunde inte öppna hjälpen",
-                             "Öppna hjälpen manuellt i din webbläsare:\n\n" + url, parent=self)
+        messagebox.showerror(tr('Kunde inte öppna hjälpen'),
+                             tr('Öppna hjälpen manuellt i din webbläsare:\n\n') + url, parent=self)
 
     def _shortcut(self, fn):
         fn()
@@ -352,6 +808,7 @@ class App(tk.Tk):
                 for w in (self, self.editor):
                     w.bind(f"<{m}-{key}>", lambda e, f=fn: self._shortcut(f))
         self.bind("<F1>", lambda e: self._shortcut(self.open_help))
+        self.bind("<F7>", lambda e: self._shortcut(self.open_terminal))
         self.bind("<F5>", lambda e: self._shortcut(self.run_in_app))
         self.bind("<F6>", lambda e: self._shortcut(self.run_in_terminal))
 
@@ -360,7 +817,7 @@ class App(tk.Tk):
         return bool(self.editor.edit_modified())
 
     def _update_title(self):
-        name = self.current.name if self.current else "(ingen fil)"
+        name = self.current.name if self.current else tr('(ingen fil)')
         self.title(f"{'● ' if self._dirty() else ''}{name} – Runcom")
 
     def _set_status(self, text):
@@ -377,7 +834,7 @@ class App(tk.Tk):
         """True om det är okej att gå vidare (ändringar sparade eller förkastade)."""
         if not self._dirty():
             return True
-        ans = messagebox.askyesnocancel("Osparade ändringar", "Vill du spara ändringarna först?")
+        ans = messagebox.askyesnocancel(tr('Osparade ändringar'), tr('Vill du spara ändringarna först?'))
         if ans is None:
             return False
         if ans:
@@ -401,7 +858,7 @@ class App(tk.Tk):
             )
         except OSError as e:
             self.files = []
-            self._set_status(f"Kunde inte läsa mappen: {e}")
+            self._set_status('{0}{1}'.format(tr('Kunde inte läsa mappen: '), e))
         for p in self.files:
             self.listbox.insert("end", p.name)
         if self.current in self.files:
@@ -418,8 +875,8 @@ class App(tk.Tk):
     def new_file(self):
         if not self._confirm_discard():
             return
-        hint = "backup.bat, backup.ps1 eller hello.py" if IS_WIN else "backup.sh eller hello.py"
-        name = simpledialog.askstring("Ny skriptfil", f"Filnamn (t.ex. {hint}):", parent=self)
+        hint = tr('backup.bat, backup.ps1 eller hello.py') if IS_WIN else tr('backup.sh eller hello.py')
+        name = simpledialog.askstring(tr('Ny skriptfil'), '{0}{1}):'.format(tr('Filnamn (t.ex. '), hint), parent=self)
         if not name:
             return
         name = name.strip().replace("/", "_").replace("\\", "_")
@@ -429,25 +886,25 @@ class App(tk.Tk):
             name += DEFAULT_EXT
         path = self.folder / name
         if path.exists():
-            messagebox.showerror("Finns redan", f"{name} finns redan i mappen.")
+            messagebox.showerror(tr('Finns redan'), '{0}{1}'.format(name, tr(' finns redan i mappen.')))
             return
         text = template_for(name)
         try:
             snapshot = atomic_write(path, text, file_encoding(path),
                                     executable=text.startswith("#!"), exclusive=True)
         except (OSError, UnicodeEncodeError) as e:
-            messagebox.showerror("Fel", str(e))
+            messagebox.showerror(tr('Fel'), str(e))
             return
         self.current = path
         self._snapshot = snapshot
         self._set_text(text)
         self.search.set("")
         self.refresh_list()
-        self._set_status(f"Skapade {path}")
+        self._set_status('{0}{1}'.format(tr('Skapade '), path))
         self.editor.focus_set()
 
     def open_file(self):
-        path = filedialog.askopenfilename(initialdir=self.folder, title="Öppna skriptfil")
+        path = filedialog.askopenfilename(initialdir=self.folder, title=tr('Öppna skriptfil'))
         if path:
             self.load_path(Path(path))
 
@@ -462,7 +919,7 @@ class App(tk.Tk):
             text = snapshot.decode(file_encoding(path))
             text = text.replace("\r\n", "\n").replace("\r", "\n")
         except (OSError, UnicodeDecodeError) as e:
-            messagebox.showerror("Kunde inte öppna", str(e))
+            messagebox.showerror(tr('Kunde inte öppna'), str(e))
             return
         if path.parent != self.folder:
             self.folder = path.parent
@@ -470,7 +927,7 @@ class App(tk.Tk):
         self._snapshot = snapshot
         self._set_text(text)
         self.refresh_list()
-        self._set_status(f"Öppnade {path}")
+        self._set_status('{0}{1}'.format(tr('Öppnade '), path))
 
     def save(self):
         if self.current is None:
@@ -483,27 +940,25 @@ class App(tk.Tk):
             if snapshot is not None:
                 actual = self.current.read_bytes() if self.current.exists() else None
                 if actual != snapshot and not messagebox.askyesno(
-                        "Filen har ändrats", "Filen har ändrats eller tagits bort utanför Runcom.\n"
-                        "Vill du skriva över den med innehållet i editorn?", parent=self):
+                        tr('Filen har ändrats'), tr('Filen har ändrats eller tagits bort utanför Runcom.\nVill du skriva över den med innehållet i editorn?'), parent=self):
                     return False
             snapshot = atomic_write(self.current, text, file_encoding(self.current),
                                     executable=text.startswith("#!"))
         except UnicodeEncodeError:
-            messagebox.showerror("Kunde inte spara",
-                                 "Filen innehåller tecken som inte finns i batchfilernas teckentabell "
-                                 f"({OEM}). Ta bort dem eller använd en .ps1-fil.")
+            messagebox.showerror(tr('Kunde inte spara'),
+                                 '{0}{1}{2}'.format(tr('Filen innehåller tecken som inte finns i batchfilernas teckentabell ('), OEM, tr('). Ta bort dem eller använd en .ps1-fil.')))
             return False
         except OSError as e:
-            messagebox.showerror("Kunde inte spara", str(e))
+            messagebox.showerror(tr('Kunde inte spara'), str(e))
             return False
         self._snapshot = snapshot
         self.editor.edit_modified(False)
         self._update_title()
-        self._set_status(f"Sparade {self.current}")
+        self._set_status('{0}{1}'.format(tr('Sparade '), self.current))
         return True
 
     def save_as(self):
-        path = filedialog.asksaveasfilename(initialdir=self.folder, title="Spara som",
+        path = filedialog.asksaveasfilename(initialdir=self.folder, title=tr('Spara som'),
                                             defaultextension=DEFAULT_EXT)
         if not path:
             return False
@@ -523,23 +978,23 @@ class App(tk.Tk):
     def delete_file(self):
         if self.current is None:
             return
-        if not messagebox.askyesno("Ta bort", f"Ta bort {self.current.name} permanent?"):
+        if not messagebox.askyesno(tr('Ta bort'), '{0}{1}{2}'.format(tr('Ta bort '), self.current.name, tr(' permanent?'))):
             return
         try:
             self.current.unlink()
         except OSError as e:
-            messagebox.showerror("Fel", str(e))
+            messagebox.showerror(tr('Fel'), str(e))
             return
         self.current = None
         self._snapshot = None
         self._set_text("")
         self.refresh_list()
-        self._set_status("Filen togs bort")
+        self._set_status(tr('Filen togs bort'))
 
     def change_folder(self):
         if not self._confirm_discard():
             return
-        d = filedialog.askdirectory(initialdir=self.folder, title="Välj mapp")
+        d = filedialog.askdirectory(initialdir=self.folder, title=tr('Välj mapp'))
         if d:
             self.folder = Path(d)
             self.current = None
@@ -581,13 +1036,13 @@ class App(tk.Tk):
         try:
             cmd = self._command_for(path)
         except (OSError, ValueError) as error:
-            messagebox.showerror("Kunde inte köra skriptet", str(error), parent=self)
+            messagebox.showerror(tr('Kunde inte köra skriptet'), str(error), parent=self)
             return
         self.output.config(state="normal")
         self.output.delete("1.0", "end")
         self.output.config(state="disabled")
         if cmd is None:
-            self._out("Filtypen stöds inte. Använd ett skal- eller Python-skript (Windows: .bat, .cmd, .ps1 eller .py).\n", "err")
+            self._out(tr('Filtypen stöds inte. Använd ett skal- eller Python-skript (Windows: .bat, .cmd, .ps1 eller .py).\n'), "err")
             return
         self._out(f"> {path}\n", "info")
         kwargs = dict(
@@ -602,12 +1057,12 @@ class App(tk.Tk):
         try:
             self.proc = subprocess.Popen(cmd, **kwargs)
         except OSError as e:
-            self._out(f"Kunde inte starta: {e}\n", "err")
+            self._out('{0}{1}\n'.format(tr('Kunde inte starta: '), e), "err")
             self.proc = None
             return
         self.btn_run.config(state="disabled")
         self.btn_stop.config(state="normal")
-        self._set_status("Kör…")
+        self._set_status(tr('Kör…'))
         encoding = OEM
         if path.suffix.lower() == ".py" or (
                 path.suffix.lower() == ".ps1" and isinstance(cmd, list)
@@ -650,15 +1105,15 @@ class App(tk.Tk):
                 if proc is not self.proc:
                     continue
                 if kind == "error":
-                    self._out(f"Kunde inte läsa utdata: {val}\n", "err")
+                    self._out('{0}{1}\n'.format(tr('Kunde inte läsa utdata: '), val), "err")
                 elif kind == "line":
                     self._out(val)
                 else:
-                    self._out(f"\n[Avslutades med kod {val}]\n", "info" if val == 0 else "err")
+                    self._out('{0}{1}]\n'.format(tr('\n[Avslutades med kod '), val), "info" if val == 0 else "err")
                     self.proc = None
                     self.btn_run.config(state="normal")
                     self.btn_stop.config(state="disabled")
-                    self._set_status(f"Klar (kod {val})")
+                    self._set_status('{0}{1})'.format(tr('Klar (kod '), val))
         except queue.Empty:
             pass
         self._queue_after = self.after(50, self._drain_queue)
@@ -676,7 +1131,7 @@ class App(tk.Tk):
                 if self._stop_after is not None:
                     self.after_cancel(self._stop_after)
                 self._stop_after = self.after(1500, lambda proc=self.proc: self._force_stop(proc))
-            self._out("\n[Stoppad av användaren]\n", "err")
+            self._out(tr('\n[Stoppad av användaren]\n'), "err")
         except (ProcessLookupError, PermissionError, OSError):
             pass
 
@@ -696,14 +1151,13 @@ class App(tk.Tk):
     def _unix_inner(self, path, elevated=False):
         command = self._command_for(path)
         if command is None:
-            raise ValueError("Filtypen stöds inte. Välj ett skal- eller Python-skript.")
+            raise ValueError(tr('Filtypen stöds inte. Välj ett skal- eller Python-skript.'))
         if elevated:
             sudo = shutil.which("sudo")
             if not sudo:
-                raise ValueError("Kommandot sudo hittades inte.")
+                raise ValueError(tr('Kommandot sudo hittades inte.'))
             command = [sudo, "--", *command]
-        return (shlex.join(command) + "; echo; "
-                "printf '[Klart - tryck Enter för att stänga] '; read -r _x")
+        return (shlex.join(command) + tr("; echo; printf '[Klart - tryck Enter för att stänga] '; read -r _x"))
 
     def run_in_terminal(self, elevated=False):
         if not self._prepare_run():
@@ -713,28 +1167,27 @@ class App(tk.Tk):
             if IS_WIN:
                 cmd = self._command_for(path, keep_open=True)
                 if cmd is None:
-                    messagebox.showerror("Filtypen stöds inte", "Använd .bat, .cmd, .ps1 eller .py.")
+                    messagebox.showerror(tr('Filtypen stöds inte'), tr('Använd .bat, .cmd, .ps1 eller .py.'))
                     return
                 subprocess.Popen(cmd, cwd=str(path.parent), creationflags=NEW_CONSOLE)
-                self._set_status(f"Startade {path.name} i ett konsolfönster")
+                self._set_status('{0}{1}{2}'.format(tr('Startade '), path.name, tr(' i ett konsolfönster')))
             elif IS_MAC:
                 line = f"cd {shlex.quote(str(path.parent))} && {self._unix_inner(path, elevated)}"
                 esc = line.replace("\\", "\\\\").replace('"', '\\"')
                 script = f'tell application "Terminal"\nactivate\ndo script "{esc}"\nend tell'
                 subprocess.Popen(["osascript", "-e", script])
-                self._set_status(f"Startade {path.name} i Terminal")
+                self._set_status('{0}{1}{2}'.format(tr('Startade '), path.name, tr(' i Terminal')))
             else:
                 for prog, prefix in TERMINALS:
                     if shutil.which(prog):
                         subprocess.Popen([prog, *prefix, "bash", "-c", self._unix_inner(path, elevated)],
                                          cwd=str(path.parent), start_new_session=True)
-                        self._set_status(f"Startade {path.name} i {prog}")
+                        self._set_status('{0}{1}{2}{3}'.format(tr('Startade '), path.name, tr(' i '), prog))
                         return
-                messagebox.showerror("Ingen terminal hittades",
-                                     "Installera t.ex. gnome-terminal, konsole eller xterm, "
-                                     "eller använd ”Kör här”.")
+                messagebox.showerror(tr('Ingen terminal hittades'),
+                                     tr('Installera t.ex. gnome-terminal, konsole eller xterm, eller använd ”Kör här”.'))
         except (OSError, ValueError) as e:
-            messagebox.showerror("Fel", str(e))
+            messagebox.showerror(tr('Fel'), str(e))
 
     def run_as_admin(self):
         """Windows: kör skriptet förhöjt. Windows visar sin egen UAC-ruta varje gång."""
@@ -746,7 +1199,7 @@ class App(tk.Tk):
             try:
                 command = self._command_for(path, keep_open=True)
             except ValueError as error:
-                messagebox.showerror("Kunde inte köra skriptet", str(error), parent=self)
+                messagebox.showerror(tr('Kunde inte köra skriptet'), str(error), parent=self)
                 return
             exe = os.environ.get("COMSPEC", "cmd.exe")
             params = command[len(subprocess.list2cmdline([exe])):].lstrip()
@@ -757,16 +1210,29 @@ class App(tk.Tk):
             exe = shutil.which("pwsh") or shutil.which("powershell") or "powershell.exe"
             params = f'-NoExit -ExecutionPolicy Bypass -File "{path}"'
         else:
-            messagebox.showerror("Filtypen stöds inte", "Använd .bat, .cmd, .ps1 eller .py.")
+            messagebox.showerror(tr('Filtypen stöds inte'), tr('Använd .bat, .cmd, .ps1 eller .py.'))
             return
         r = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, params, str(path.parent), 1)
         if r <= 32:
-            self._set_status("Admin-körningen avbröts eller misslyckades")
+            self._set_status(tr('Admin-körningen avbröts eller misslyckades'))
         else:
-            self._set_status(f"Startade {path.name} som administratör")
+            self._set_status('{0}{1}{2}'.format(tr('Startade '), path.name, tr(' som administratör')))
 
     def run_with_sudo(self):
-        self.run_in_terminal(elevated=True)
+        if IS_WIN or not self._prepare_run():
+            return
+        try:
+            command = self._command_for(self.current)
+            sudo = shutil.which('sudo')
+            if not sudo:
+                raise ValueError(tr('Kommandot sudo hittades inte.'))
+            if command is None:
+                raise ValueError(tr('Filtypen stöds inte. Välj ett skal- eller Python-skript.'))
+            self.open_terminal()
+            self.terminal.command('cd ' + shlex.quote(str(self.current.parent)) + ' && ' +
+                                  shlex.join([sudo, '--', *command]))
+        except (OSError, ValueError) as error:
+            messagebox.showerror(tr('Kunde inte köra skriptet'), str(error), parent=self)
 
     def _run_env(self):
         env = os.environ.copy()
@@ -787,6 +1253,7 @@ class App(tk.Tk):
             self.stop()
             if not IS_WIN:
                 self._force_stop(self.proc)
+        self.terminal.close()
         self._closing = True
         self.after_cancel(self._queue_after)
         if self._stop_after is not None:
@@ -795,6 +1262,8 @@ class App(tk.Tk):
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == '--terminal-child' and not IS_WIN:
+        terminal_child(sys.argv[2])
     if IS_WIN:
         try:  # skarp text på skärmar med skalning
             ctypes.windll.shcore.SetProcessDpiAwareness(1)
@@ -803,5 +1272,5 @@ if __name__ == "__main__":
     try:
         App().mainloop()
     except tk.TclError as error:
-        print(f"Runcom kunde inte starta det grafiska gränssnittet: {error}", file=sys.stderr)
+        print('{0}{1}'.format(tr('Runcom kunde inte starta det grafiska gränssnittet: '), error), file=sys.stderr)
         sys.exit(1)

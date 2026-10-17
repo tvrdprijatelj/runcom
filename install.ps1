@@ -1,6 +1,7 @@
 param(
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Runcom'),
     [string]$Ref = '',
+    [ValidateSet('sv', 'en')][string]$Language,
     [switch]$NoShortcut
 )
 $ErrorActionPreference = 'Stop'
@@ -73,6 +74,9 @@ compile(app.read_bytes(), str(app), 'exec')
     Invoke-Python -Exe $venvPython -Arguments @('-c', 'import tkinter')
     $requirements = Join-Path $folder 'requirements.txt'
     if (Test-Path $requirements) { Invoke-Python -Exe $venvPython -Arguments @('-m', 'pip', 'install', '-r', $requirements) }
+    if ($Language -eq 'en' -and -not (Select-String -Path (Join-Path $folder 'runcom.py') -Pattern 'TRANSLATIONS' -Quiet)) {
+        throw 'This version does not support English. Retry with -Ref main.'
+    }
     $appPath = Join-Path $InstallDir 'runcom.py'
     $copy = @'
 import os, pathlib, sys, tempfile
@@ -94,6 +98,9 @@ finally:
         if (Test-Path $assetSource -PathType Leaf) {
             Invoke-Python -Exe $py -Arguments @('-c', $copy, $assetSource, (Join-Path $InstallDir $asset))
         }
+    }
+    if ($Language) {
+        [IO.File]::WriteAllText((Join-Path $InstallDir 'runcom-language'), $Language, (New-Object Text.UTF8Encoding $false))
     }
     if (-not $NoShortcut) {
         try {

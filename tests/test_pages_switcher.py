@@ -1,8 +1,9 @@
 import json
+import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from urllib.error import HTTPError
-from pages_switcher import PagesClient, identify_page
+from pages_switcher import App, PagesClient, identify_page
 
 
 def state(branch="main"):
@@ -26,6 +27,35 @@ class PagesTests(unittest.TestCase):
         self.assertEqual(data['build_warning'], 'Build unavailable')
         self.assertIsNone(data['live_mode'])
         self.assertFalse(urlopen.call_args.args[0].has_header('Authorization'))
+
+    def test_status_diagnostics_run_concurrently(self):
+        client = PagesClient("test")
+        both_started = threading.Barrier(2)
+
+        def build(**kwargs):
+            both_started.wait(timeout=2)
+            return {"status": "built"}
+
+        def live():
+            both_started.wait(timeout=2)
+            return {"live_mode": "main", "live_http": 200}
+
+        with patch.object(client, "status", return_value=state()), patch.object(client, "request", side_effect=build), patch.object(client, "live_status", side_effect=live):
+            result = client.detailed_status()
+        self.assertEqual(result["latest_build"]["status"], "built")
+        self.assertEqual(result["live_mode"], "main")
+
+    def test_actions_return_without_waiting_for_diagnostics(self):
+        for action in ("switch", "rebuild"):
+            app = Mock()
+            app.branch = "main"
+            app.pending = False
+            app.token.get.return_value = "test"
+            app.run.side_effect = lambda operation: operation()
+            with patch("pages_switcher.PagesClient") as factory:
+                getattr(App, action)(app)
+                getattr(factory.return_value, action).assert_called_once_with("main")
+                factory.return_value.detailed_status.assert_not_called()
 
     def test_switch_both_directions(self):
         for current, target in [("main", "maintenance"), ("maintenance", "main")]:
