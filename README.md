@@ -98,3 +98,7 @@ API contract: https://docs.github.com/en/rest/pages/pages#update-information-abo
 Tests: `python3 -m unittest discover -s tests -p test_pages_switcher.py -v`.
 
 The Swedish and English download pages install the matching app language. Commands pass `--lang sv|en` (Bash) or `-Language sv|en` (PowerShell). Download buttons provide language-specific installers for current main. The selection is stored beside the app in `runcom-language` and retained by updates without a language argument. Older releases without English support reject English installation; use current main. The detailed help guide remains in Swedish.
+
+## Updates in the app
+
+Click **Uppdatera / Update** next to Help to check the latest published GitHub release. Confirm to install it, then restart Runcom. Checks and downloads run in the background. Scripts and language preferences are preserved. Older or diverged releases are not installed. Existing installations without version metadata need to run the updated installer once. Git checkouts must have no uncommitted changes.

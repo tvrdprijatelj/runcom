@@ -94,6 +94,7 @@ if sys.argv[3] == 'en' and b'TRANSLATIONS' not in (pathlib.Path(sys.argv[2]) / '
 if sys.argv[3]:
     replace_file(folder / 'runcom-language', sys.argv[3].encode(), 0o600)
 replace_file(folder / 'runcom.py', (pathlib.Path(sys.argv[2]) / 'runcom.py').read_bytes(), 0o600)
+replace_file(folder / 'runcom-revision', pathlib.Path(sys.argv[2]).name.rsplit('-', 1)[-1].encode(), 0o600)
 for name in ('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico'):
     asset = pathlib.Path(sys.argv[2]) / name
     if asset.is_file():

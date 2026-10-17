@@ -9,6 +9,10 @@ Start:  python3 runcom.py   (Windows: py runcom.py)
 Kräver: Python 3.8+ med Tkinter (Debian/Ubuntu: sudo apt install python3-tk)
 """
 import codecs
+import json
+import urllib.request
+import urllib.parse
+import urllib.error
 import ctypes
 import os
 import queue
@@ -37,6 +41,92 @@ NEW_CONSOLE = getattr(subprocess, "CREATE_NEW_CONSOLE", 0x00000010)
 DEFAULT_DIR = Path.home() / "skript"
 DEFAULT_EXT = ".bat" if IS_WIN else ".sh"
 HELP_URL = "https://tvrdprijatelj.github.io/runcom/help.html"
+
+GITHUB_API = "https://api.github.com/repos/tvrdprijatelj/runcom"
+
+
+def github_json(endpoint):
+    request = urllib.request.Request(GITHUB_API + endpoint, headers={
+        "Accept": "application/vnd.github+json", "User-Agent": "Runcom-updater"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+
+def current_revision(folder):
+    if (folder / ".git").exists():
+        if subprocess.check_output(["git", "status", "--porcelain"], cwd=str(folder)):
+            raise ValueError("Spara och checka in lokala kodändringar först. / Commit local changes first.")
+        return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(folder), text=True).strip()
+    marker = folder / "runcom-revision"
+    if marker.exists():
+        return marker.read_text(encoding="utf-8").strip()
+    raise ValueError("Versionsinformation saknas. Kör den nya installationsfilen en gång först. / Run the new installer once to record the installed version.")
+
+
+def available_release(folder):
+    revision = current_revision(folder)
+    try:
+        release = github_json("/releases/latest")
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            return None
+        raise
+    tag = urllib.parse.quote(release["tag_name"], safe="")
+    target = github_json("/commits/" + tag)["sha"]
+    comparison = github_json("/compare/" + urllib.parse.quote(revision, safe="") + "..." + target)
+    if comparison["status"] != "ahead":
+        return None
+    # Pin the download to the compared commit, even if the tag moves later.
+    release["revision"] = target
+    return release
+
+
+def install_release(folder, release):
+    # Fetch all files before touching the installation; keep backups for rollback.
+    revision = urllib.parse.quote(release["revision"], safe="")
+    files = {}
+    for name in ("runcom.py", "help.html", "help.css", "style.css", "runcom.png", "runcom.ico"):
+        url = "https://raw.githubusercontent.com/tvrdprijatelj/runcom/" + revision + "/" + name
+        request = urllib.request.Request(url, headers={"User-Agent": "Runcom-updater"})
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                data = response.read(10 * 1024 * 1024 + 1)
+        except urllib.error.HTTPError as error:
+            if error.code == 404 and name != "runcom.py":
+                continue
+            raise
+        if len(data) > 10 * 1024 * 1024:
+            raise ValueError("Release file is too large")
+        files[name] = data
+    compile(files["runcom.py"], "runcom.py", "exec")
+    files["runcom-revision"] = release["revision"].encode("utf-8")
+    backups = {}
+    def replace(path, data):
+        fd, temporary = tempfile.mkstemp(prefix=".runcom-update-", dir=str(folder))
+        try:
+            with os.fdopen(fd, "wb") as stream:
+                stream.write(data)
+                stream.flush()
+                os.fsync(stream.fileno())
+            if path.exists():
+                os.chmod(temporary, stat.S_IMODE(path.stat().st_mode))
+            os.replace(temporary, path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+    try:
+        for name, data in files.items():
+            path = folder / name
+            backups[name] = path.read_bytes() if path.exists() else None
+            replace(path, data)
+    except Exception:
+        for name, data in backups.items():
+            if data is None:
+                (folder / name).unlink()
+            else:
+                replace(folder / name, data)
+        raise
+
 
 def installed_language():
     try:
@@ -696,6 +786,9 @@ class App(tk.Tk):
         self.btn_help = tk.Button(header, text=tr('Hjälp'), command=self.open_help,
                                   bg="#23334a", fg="#e4ecf7")
         self.btn_help.pack(side="right")
+        self.btn_update = tk.Button(header, text="Uppdatera" if LANGUAGE == "sv" else "Update",
+                                    command=self.check_update)
+        self.btn_update.pack(side="right", padx=6)
         self.btn_terminal = tk.Button(header, text=tr('Terminal (F7)'), command=self.open_terminal)
         self.btn_terminal.pack(side="right", padx=6)
         bar = tk.Frame(self, padx=12, pady=6)
@@ -825,6 +918,47 @@ class App(tk.Tk):
         self.tabs.select(self.terminal)
         self.terminal.start()
         self.terminal.focus_terminal()
+
+    def check_update(self):
+        self.btn_update.config(state="disabled")
+        self._update_result = queue.Queue()
+        def worker():
+            try:
+                result = available_release(Path(__file__).resolve().parent)
+                self._update_result.put(("checked", result))
+            except Exception as error:
+                self._update_result.put(("error", str(error)))
+        threading.Thread(target=worker, daemon=True).start()
+        self.after(100, self._poll_update)
+
+    def _poll_update(self):
+        try:
+            kind, value = self._update_result.get_nowait()
+        except queue.Empty:
+            self.after(100, self._poll_update)
+            return
+        title = "Uppdatering" if LANGUAGE == "sv" else "Update"
+        if kind == "checked" and value:
+            prompt = (("Installera release {}? Starta om appen efter uppdateringen.")
+                      if LANGUAGE == "sv" else "Install release {}? Restart the app after updating.")
+            if messagebox.askyesno(title, prompt.format(value["tag_name"]), parent=self):
+                def worker():
+                    try:
+                        install_release(Path(__file__).resolve().parent, value)
+                        self._update_result.put(("installed", None))
+                    except Exception as error:
+                        self._update_result.put(("error", str(error)))
+                threading.Thread(target=worker, daemon=True).start()
+                self.after(100, self._poll_update)
+                return
+        elif kind == "error":
+            messagebox.showerror(title, value, parent=self)
+        else:
+            text = (("Uppdateringen är klar. Starta om Runcom." if LANGUAGE == "sv" else
+                     "Update complete. Restart Runcom.") if kind == "installed" else
+                    ("Ingen nyare release finns." if LANGUAGE == "sv" else "No newer release is available."))
+            messagebox.showinfo(title, text, parent=self)
+        self.btn_update.config(state="normal")
 
     def open_help(self):
         local = Path(__file__).resolve().with_name("help.html")

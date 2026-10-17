@@ -99,6 +99,7 @@ finally:
             Invoke-Python -Exe $py -Arguments @('-c', $copy, $assetSource, (Join-Path $InstallDir $asset))
         }
     }
+    [IO.File]::WriteAllText((Join-Path $InstallDir 'runcom-revision'), ((Split-Path $folder -Leaf) -split '-')[-1], (New-Object Text.UTF8Encoding $false))
     if ($Language) {
         [IO.File]::WriteAllText((Join-Path $InstallDir 'runcom-language'), $Language, (New-Object Text.UTF8Encoding $false))
     }
