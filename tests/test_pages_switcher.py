@@ -4,7 +4,7 @@ import threading
 import unittest
 from unittest.mock import Mock, patch
 from urllib.error import HTTPError
-from pages_switcher import App, PagesClient, identify_page
+from pages_switcher import App, PagesClient, identify_page, monitor_delay_ms
 
 
 def state(branch="main"):
@@ -31,17 +31,21 @@ class PagesTests(unittest.TestCase):
 
     def test_status_diagnostics_run_concurrently(self):
         client = PagesClient("test")
-        both_started = threading.Barrier(2)
+        all_started = threading.Barrier(3)
+
+        def status():
+            all_started.wait(timeout=2)
+            return state()
 
         def build(**kwargs):
-            both_started.wait(timeout=2)
+            all_started.wait(timeout=2)
             return {"status": "built"}
 
         def live():
-            both_started.wait(timeout=2)
+            all_started.wait(timeout=2)
             return {"live_mode": "main", "live_http": 200}
 
-        with patch.object(client, "status", return_value=state()), patch.object(client, "request", side_effect=build), patch.object(client, "live_status", side_effect=live):
+        with patch.object(client, "status", side_effect=status), patch.object(client, "request", side_effect=build), patch.object(client, "live_status", side_effect=live):
             result = client.detailed_status()
         self.assertEqual(result["latest_build"]["status"], "built")
         self.assertEqual(result["live_mode"], "main")
@@ -61,11 +65,18 @@ class PagesTests(unittest.TestCase):
     def test_switch_both_directions(self):
         for current, target in [("main", "maintenance"), ("maintenance", "main")]:
             client = PagesClient("test")
-            with patch.object(client, "request", side_effect=[state(current), {}, state(target), {"status": "queued"}]) as request:
+            with patch.object(client, "request", side_effect=[state(current), {}, {"status": "queued"}]) as request:
                 self.assertEqual(client.switch(current)["source"]["branch"], target)
                 self.assertEqual(request.call_args_list[1].args, ("PUT", {"source": {"branch": target, "path": "/"}}))
-                self.assertEqual(request.call_args_list[3].args, ("POST",))
-                self.assertEqual(request.call_args_list[3].kwargs, {"suffix": "/builds"})
+                self.assertEqual(request.call_args_list[2].args, ("POST",))
+                self.assertEqual(request.call_args_list[2].kwargs, {"suffix": "/builds"})
+                self.assertEqual(request.call_count, 3)
+
+    def test_monitoring_is_fast_first_and_backs_off(self):
+        self.assertEqual(monitor_delay_ms(0, build_requested=True), 750)
+        self.assertEqual(monitor_delay_ms(10), 1500)
+        self.assertEqual(monitor_delay_ms(30), 3000)
+        self.assertEqual(monitor_delay_ms(120), 5000)
 
     def test_republish_preserves_branch_and_reports_failure(self):
         client = PagesClient("test")

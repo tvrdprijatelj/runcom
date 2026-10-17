@@ -89,7 +89,7 @@ For local GUI tests on Linux, use `xvfb-run -a python3 -m unittest discover -s t
 
 ## Desktop Pages switcher
 
-Run `python3 pages_switcher.py` to switch GitHub Pages between `main` and `maintenance` (repository root). Uses Python and Tkinter only. On this Linux computer it is also installed in the application menu as **Runcom Pages**.
+Run `python3 pages_switcher.py` to switch GitHub Pages between `main` and `maintenance` (repository root). Uses Python and Tkinter only. The app checks the Pages API, latest build, and public site in parallel, then follows a requested deployment automatically. Press `Ctrl+R` to refresh or `Esc` to stop automatic monitoring. If `GH_TOKEN` or `GITHUB_TOKEN` is set, the first status check starts automatically. On this Linux computer it is also installed in the application menu as **Runcom Pages**.
 
 Create a fine-grained GitHub personal access token for `tvrdprijatelj/runcom` with **Pages: Read and write** and **Administration: Read and write**. Paste it into the app, click **Läs status**, then use the toggle. The token is kept in memory only; `GH_TOKEN` or `GITHUB_TOKEN` can also supply it. The app changes the Pages source setting; publication takes time. It refuses unexpected branches, directories or workflow-based publishing. After a connection failure, read status again before retrying.
 
