@@ -1091,14 +1091,18 @@ class App(tk.Tk):
     def _command_for(self, path, keep_open=False):
         return script_command(path, keep_open)
 
+    def _script_uses_sudo(self):
+        return (not IS_WIN and self.current is not None
+                and self.current.suffix.lower() in ('.sh', '.bash', '.zsh', '.ksh')
+                and contains_sudo_command(self.editor.get('1.0', 'end-1c')))
+
     def run_in_app(self):
         if self.proc is not None:
             return
         if not self._prepare_run():
             return
         path = self.current
-        if (not IS_WIN and path.suffix.lower() in ('.sh', '.bash', '.zsh', '.ksh')
-                and contains_sudo_command(self.editor.get('1.0', 'end-1c'))):
+        if self._script_uses_sudo():
             self.run_with_sudo()
             return
         try:
@@ -1231,6 +1235,7 @@ class App(tk.Tk):
         if not self._prepare_run():
             return
         path = self.current
+        elevated = elevated or self._script_uses_sudo()
         try:
             if IS_WIN:
                 cmd = self._command_for(path, keep_open=True)
