@@ -83,3 +83,13 @@ CI runs Python tests on Linux (3.8, 3.12 and 3.14), Windows and macOS. Linux use
 Browser tests use Playwright/Chromium to check Swedish and English pages at desktop and mobile sizes, downloads, version selection and clipboard behavior. CI saves page screenshots as artifacts. These are automated functional checks, not exhaustive testing of every desktop configuration.
 
 For local GUI tests on Linux, use `xvfb-run -a python3 -m unittest discover -s tests -v` or run in a desktop session. Without a display, GUI tests skip; CI sets `RUNCOM_REQUIRE_GUI=1` so display failures cannot pass silently.
+
+## Desktop Pages switcher
+
+Run `python3 pages_switcher.py` to switch GitHub Pages between `main` and `maintenance` (repository root). Uses Python and Tkinter only. On this Linux computer it is also installed in the application menu as **Runcom Pages**.
+
+Create a fine-grained GitHub personal access token for `tvrdprijatelj/runcom` with **Pages: Read and write** and **Administration: Read and write**. Paste it into the app, click **Läs status**, then use the toggle. The token is kept in memory only; `GH_TOKEN` or `GITHUB_TOKEN` can also supply it. The app changes the Pages source setting; publication takes time. It refuses unexpected branches, directories or workflow-based publishing. After a connection failure, read status again before retrying.
+
+API contract: https://docs.github.com/en/rest/pages/pages#update-information-about-a-github-pages-site
+
+Tests: `python3 -m unittest discover -s tests -p test_pages_switcher.py -v`.
