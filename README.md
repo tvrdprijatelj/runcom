@@ -105,4 +105,22 @@ Click **Uppdatera / Update** next to Help to check the latest published GitHub r
 
 ## Uninstall
 
-Download `uninstall.sh` (Linux/macOS) or `uninstall.ps1` (Windows) from either download page. Close Runcom, inspect the script, then run `bash uninstall.sh` or `powershell -ExecutionPolicy Bypass -File .\uninstall.ps1` and confirm. The scripts remove installer-owned files, the virtual environment and matching application shortcuts. Your scripts and extra files are kept. For a custom location, set `RUNCOM_INSTALL_DIR` (Bash) or use `-InstallDir` (PowerShell). `--yes` / `-Yes` skips confirmation.
+Close Runcom and open **Avinstallera Runcom** from the Linux application menu or Windows Start menu. Confirm the displayed location with `y` and Enter. The installed launcher remembers custom installation paths. On macOS open **Uninstall Runcom.command** in the installation folder. These local launchers are included with new main installations and work offline.
+
+If the shortcut is missing, use https://tvrdprijatelj.github.io/runcom/download_sv.html#uninstall (or download_en.html#uninstall). The page has OS/distribution-specific steps, copyable commands, a separate download button, custom-path instructions, outcome checks and troubleshooting. Linux choices include Arch, Ubuntu, Debian, Mint, Fedora, openSUSE and Alpine.
+
+Manual Linux/macOS removal:
+
+```sh
+curl -fL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/uninstall.sh -o runcom-uninstall.sh
+bash runcom-uninstall.sh
+```
+
+Windows PowerShell:
+
+```powershell
+Invoke-WebRequest -UseBasicParsing https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/uninstall.ps1 -OutFile runcom-uninstall.ps1
+powershell -ExecutionPolicy Bypass -File .\runcom-uninstall.ps1
+```
+
+Only installer-owned files, the virtual environment and matching shortcuts are removed. Personal scripts and extra files are preserved; shared system tools are left installed. For custom locations use `RUNCOM_INSTALL_DIR` (Bash) or `-InstallDir` (PowerShell). `--yes` / `-Yes` bypasses confirmation for automation.

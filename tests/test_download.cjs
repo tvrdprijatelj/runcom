@@ -7,7 +7,7 @@ const script = fs.readFileSync(path.join(__dirname, '../download.js'), 'utf8');
   for (const lang of ['sv','en']) {
     for (const platform of ['Linux','Win32','MacIntel']) {
       const elements = {};
-      for (const id of ['os','version','status','prerequisites','command','installer','launch','copy','uninstall-os','uninstaller','uninstall-command','uninstall-copy','uninstall-status','uninstall-custom']) {
+      for (const id of ['os','version','status','prerequisites','command','installer','launch','copy','uninstall-os','uninstaller','uninstall-command','uninstall-copy','uninstall-status','uninstall-custom','uninstall-distro','uninstall-menu','uninstall-terminal','uninstall-tools','uninstall-tools-note']) {
         elements[id] = {value:id === 'version'?'main':'',textContent:'',events:{},addEventListener(event,fn){this.events[event]=fn;}};
       }
       let clipboard = '';
@@ -28,10 +28,14 @@ const script = fs.readFileSync(path.join(__dirname, '../download.js'), 'utf8');
           assert.equal(clipboard,command);
         }
       }
-      for (const selected of ['linux','mac','windows']) {
+      for (const selected of ['arch','ubuntu','debian','mint','fedora','opensuse','alpine','linux','mac','windows']) {
         elements['uninstall-os'].value = selected;
         elements['uninstall-os'].events.change();
         const win = selected === 'windows';
+        assert.ok(elements['uninstall-menu'].textContent.length>20);
+        assert.ok(elements['uninstall-terminal'].textContent.length>20);
+        const managers={arch:'pacman',ubuntu:'apt',debian:'apt',mint:'apt',fedora:'dnf',opensuse:'zypper',alpine:'apk'};
+        if(managers[selected]) assert.ok(elements['uninstall-tools'].textContent.includes(managers[selected]));
         assert.equal(elements.uninstaller.href, `uninstall.${win ? 'ps1' : 'sh'}`);
         assert.equal(elements.uninstaller.download, `runcom-uninstall.${win ? 'ps1' : 'sh'}`);
         const command = elements['uninstall-command'].textContent;

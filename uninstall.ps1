@@ -27,7 +27,8 @@ try {
     try { $shell = New-Object -ComObject WScript.Shell } catch { Write-Warning 'Could not inspect shortcuts; remove them manually if needed.' }
     foreach ($location in @(
         (Join-Path ([Environment]::GetFolderPath('Programs')) 'Runcom.lnk'),
-        (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Runcom.lnk')
+        (Join-Path ([Environment]::GetFolderPath('Desktop')) 'Runcom.lnk'),
+        (Join-Path ([Environment]::GetFolderPath('Programs')) 'Avinstallera Runcom.lnk')
     )) {
         if ($shell -and (Test-Path -LiteralPath $location)) {
             $shortcut = $shell.CreateShortcut($location)
@@ -46,7 +47,7 @@ try {
             Remove-Item -LiteralPath $venv -Recurse -Force
         }
     }
-    foreach ($name in @('runcom.py', 'runcom-language', 'runcom-revision', 'help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico')) {
+    foreach ($name in @('runcom.py', 'runcom-language', 'runcom-revision', 'help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico', 'uninstall.ps1', 'uninstall.sh')) {
         $path = Join-Path $InstallDir $name
         if (Test-Path -LiteralPath $path -PathType Leaf) { Remove-Item -LiteralPath $path -Force }
     }

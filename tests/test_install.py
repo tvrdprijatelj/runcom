@@ -110,6 +110,34 @@ else:
         self.assertIn('/zipball/main', requests)
         self.assertNotIn('releases/latest', requests)
 
+    def test_bundled_uninstaller_keeps_scripts_and_removes_both_menu_entries(self):
+        if sys.version_info >= (3, 9):
+            self.install = self.root / 'Runcom % with "quotes" and spaces'
+            self.env['RUNCOM_INSTALL_DIR'] = str(self.install)
+        self.archive({'release/runcom.py': 'print("installed")',
+                      'release/uninstall.sh': (ROOT/'uninstall.sh').read_bytes()})
+        result = self.run_installer('--ref', 'main')
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        launcher = self.install / ('Uninstall Runcom.command' if sys.platform == 'darwin' else 'runcom-uninstall')
+        self.assertTrue(launcher.is_file())
+        personal = self.install/'my-script.py'
+        personal.write_text('print("keep")')
+        env = dict(self.env)
+        env.pop('RUNCOM_INSTALL_DIR')
+        declined = subprocess.run([str(launcher)], input='n\n', text=True,capture_output=True,env=env)
+        self.assertEqual(declined.returncode,0,declined.stderr)
+        self.assertTrue((self.install/'runcom.py').exists())
+        removed = subprocess.run([str(launcher)], input='y\n', text=True,capture_output=True,env=env)
+        self.assertEqual(removed.returncode,0,removed.stdout+removed.stderr)
+        self.assertFalse((self.install/'runcom.py').exists())
+        self.assertFalse((self.install/'venv').exists())
+        self.assertFalse(launcher.exists())
+        self.assertEqual(personal.read_text(),'print("keep")')
+        if sys.platform.startswith('linux'):
+            apps=Path(env['XDG_DATA_HOME'])/'applications'
+            self.assertFalse((apps/'runcom.desktop').exists())
+            self.assertFalse((apps/'runcom-uninstall.desktop').exists())
+
     def test_help_assets_are_available_offline(self):
         self.archive({'release/runcom.py': 'print("installed")',
                       **{'release/'+name: (ROOT/name).read_bytes()

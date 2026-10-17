@@ -95,13 +95,19 @@ if sys.argv[3]:
     replace_file(folder / 'runcom-language', sys.argv[3].encode(), 0o600)
 replace_file(folder / 'runcom.py', (pathlib.Path(sys.argv[2]) / 'runcom.py').read_bytes(), 0o600)
 replace_file(folder / 'runcom-revision', pathlib.Path(sys.argv[2]).name.rsplit('-', 1)[-1].encode(), 0o600)
-for name in ('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico'):
+for name in ('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico', 'uninstall.sh', 'uninstall.ps1'):
     asset = pathlib.Path(sys.argv[2]) / name
     if asset.is_file():
         replace_file(folder / name, asset.read_bytes(), 0o600)
 launcher = folder / 'runcom'
 launcher_text = ('#!/bin/sh\nexec ' + shlex.quote(str(folder / 'venv/bin/python')) + ' ' + shlex.quote(str(folder / 'runcom.py')) + ' "$@"\n')
 replace_file(launcher, launcher_text.encode(), 0o700)
+uninstall_launcher = folder / ('Uninstall Runcom.command' if sys.platform == 'darwin' else 'runcom-uninstall')
+if (folder / 'uninstall.sh').is_file():
+    command = ('#!/bin/sh\nexport RUNCOM_INSTALL_DIR=' + shlex.quote(str(folder)) + '\n'
+               'exec bash ' + shlex.quote(str(folder / 'uninstall.sh')) + ' "$@"\n')
+    replace_file(uninstall_launcher, command.encode(), 0o700)
+    print('Uninstall with: ' + shlex.quote(str(uninstall_launcher)))
 if sys.platform.startswith('linux'):
     # Desktop Entry: escape the string layer, then the Exec argument layer.
     def desktop_value(value):
@@ -127,6 +133,14 @@ if sys.platform.startswith('linux'):
                 'Keywords=script;editor;python;bash;skript;\n')
         replace_file(entry, text.encode('utf-8'), 0o644)
         print('Application menu shortcut: ' + str(entry))
+        if (folder / 'uninstall.sh').is_file():
+            remove_entry = entry.with_name('runcom-uninstall.desktop')
+            text = ('[Desktop Entry]\nType=Application\nVersion=1.0\nName=Uninstall Runcom\n'
+                    'Name[sv]=Avinstallera Runcom\nComment=Remove Runcom; keep personal scripts\n'
+                    'Exec=' + exec_argument('/bin/sh') + ' ' + exec_argument(uninstall_launcher) + '\n'
+                    'Path=' + desktop_value(folder) + '\n'
+                    'Icon=system-software-install\nTerminal=true\nCategories=Development;Utility;\n')
+            replace_file(remove_entry, text.encode('utf-8'), 0o644)
     except OSError as error:
         print('Could not create the application menu shortcut: ' + str(error), file=sys.stderr)
 print('Installation complete. Start Runcom from your application menu (Linux), or with:\n' + shlex.quote(str(launcher)))

@@ -47,13 +47,43 @@ document.getElementById('copy').addEventListener('click', async()=>{
 
 const uninstallOS = document.getElementById('uninstall-os');
 uninstallOS.value = /Win/i.test(platform) ? 'windows' : /Mac/i.test(platform) ? 'mac' : 'linux';
+const uninstallDistros = {
+  arch: {name:'Arch Linux / EndeavourOS / Manjaro', tools:'sudo pacman -Syu --needed python bash curl', menu:text('Ofta KDE eller GNOME: öppna programstartaren och sök efter Avinstallera Runcom (Uninstall Runcom).','Often KDE or GNOME: open the application launcher and search for Uninstall Runcom (Avinstallera Runcom).')},
+  ubuntu: {name:'Ubuntu', tools:'sudo apt update && sudo apt install python3 bash curl', menu:text('I Ubuntu med GNOME: tryck Super, sök efter Avinstallera Runcom (Uninstall Runcom) och öppna träffen.','On Ubuntu with GNOME: press Super, search for Uninstall Runcom and open the result.')},
+  debian: {name:'Debian', tools:'sudo apt update && sudo apt install python3 bash curl', menu:text('Öppna programmenyn i GNOME, KDE eller Xfce och sök efter Avinstallera Runcom (Uninstall Runcom).','Open the application menu in GNOME, KDE or Xfce and search for Uninstall Runcom.')},
+  mint: {name:'Linux Mint', tools:'sudo apt update && sudo apt install python3 bash curl', menu:text('I Cinnamon: öppna Meny och sök efter Avinstallera Runcom (Uninstall Runcom). I MATE eller Xfce använder du motsvarande programmeny.','In Cinnamon: open Menu and search for Uninstall Runcom. In MATE or Xfce use the corresponding application menu.')},
+  fedora: {name:'Fedora', tools:'sudo dnf install python3 bash curl', menu:text('I Fedora Workstation med GNOME: tryck Super och sök efter Avinstallera Runcom. I Fedora KDE använder du programstartaren.','In Fedora Workstation with GNOME: press Super and search for Uninstall Runcom. On Fedora KDE use the application launcher.')},
+  opensuse: {name:'openSUSE', tools:'sudo zypper install python3 bash curl', menu:text('I KDE: öppna programstartaren och sök efter Avinstallera Runcom. I GNOME använder du översikten med Super.','In KDE: open the application launcher and search for Uninstall Runcom. In GNOME use the overview with Super.')},
+  alpine: {name:'Alpine Linux', tools:'apk add python3 bash curl', menu:text('Om du använder ett grafiskt skrivbord: sök efter Avinstallera Runcom i dess programmeny. Utan skrivbord använder du terminalmetoden.','With a graphical desktop, search for Uninstall Runcom in its application menu. Without a desktop use the terminal method.')},
+  linux: {name:text('Annan Linuxdistribution / osäker','Other Linux distribution / not sure'), tools:'python3 --version\nbash --version\ncurl --version', menu:text('Öppna din programmeny och sök efter Avinstallera Runcom (Uninstall Runcom). Saknas den använder du terminalmetoden.','Open your application menu and search for Uninstall Runcom. If it is missing, use the terminal method.')}
+};
 function updateUninstall(){
-  const win = uninstallOS.value === 'windows';
+  const selected = uninstallOS.value;
+  const win = selected === 'windows';
+  const mac = selected === 'mac';
   const extension = win ? 'ps1' : 'sh';
   const link = document.getElementById('uninstaller');
   link.href = `uninstall.${extension}`;
   link.download = `runcom-uninstall.${extension}`;
   link.textContent = text('Ladda ner avinstallationsskript', 'Download uninstaller');
+  const distro = uninstallDistros[selected] || uninstallDistros.linux;
+  document.getElementById('uninstall-distro').textContent = win ? 'Windows' : mac ? 'macOS' : text('Instruktion för: ', 'Instructions for: ') + distro.name;
+  document.getElementById('uninstall-menu').textContent = win
+    ? text('Öppna Start-menyn, sök efter Avinstallera Runcom och starta genvägen.', 'Open Start, search for Avinstallera Runcom (Uninstall Runcom), and open the shortcut.')
+    : mac ? text('I Finder: välj Gå → Gå till mapp och ange ~/.local/share/runcom. Öppna Uninstall Runcom.command. Använd din valda mapp om du installerade på en annan plats.', 'In Finder choose Go → Go to Folder and enter ~/.local/share/runcom. Open Uninstall Runcom.command. Use your chosen folder if you installed elsewhere.') : distro.menu;
+  document.getElementById('uninstall-terminal').textContent = win
+    ? text('Öppna PowerShell från Start-menyn. Stäng först Runcom.', 'Open PowerShell from Start. Close Runcom first.')
+    : mac ? text('Öppna Terminal via Spotlight (Command+mellanslag, skriv Terminal). Stäng först Runcom.', 'Open Terminal using Spotlight (Command+Space, type Terminal). Close Runcom first.')
+      : text('Öppna Terminal från programmenyn i ', 'Open Terminal from the application menu in ') + distro.name + text('. Stäng först Runcom.', '. Close Runcom first.');
+  document.getElementById('uninstall-tools').textContent = win
+    ? 'powershell -Command "$PSVersionTable.PSVersion"'
+    : mac ? 'python3 --version\nbash --version\ncurl --version' : distro.tools;
+  document.getElementById('uninstall-tools-note').textContent = win
+    ? text('Windows-avinstalleraren använder PowerShell och behöver inte Python.', 'The Windows uninstaller uses PowerShell and does not need Python.')
+    : mac ? text('På macOS behövs Python 3 för avinstalleraren. Om det saknas, installera Python från python.org. Bash och curl följer normalt med macOS.', 'On macOS the uninstaller needs Python 3. If missing, install Python from python.org. Bash and curl normally ship with macOS.')
+      : selected === 'alpine' ? text('Kör följande i en root-terminal om verktygen saknas. Använd doas eller sudo om din Alpine-installation är konfigurerad för det.', 'Run the following in a root terminal if tools are missing. Use doas or sudo if configured on your Alpine installation.')
+        : selected === 'linux' ? text('Kontrollera verktygen nedan. Saknas något, installera det med din distributions pakethanterare.', 'Check the tools below. If any are missing, install them with your distribution’s package manager.')
+          : text('Om ett verktyg saknas, använd detta kommando för ', 'If a tool is missing, use this command for ') + distro.name + (selected === 'arch' ? text('. Kommandot gör även en fullständig systemuppdatering.', '. This also performs a full system upgrade.') : '.');
   const base = 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/';
   document.getElementById('uninstall-command').textContent = win
     ? `Invoke-WebRequest -UseBasicParsing '${base}uninstall.ps1' -OutFile runcom-uninstall.ps1\npowershell -ExecutionPolicy Bypass -File .\\runcom-uninstall.ps1`

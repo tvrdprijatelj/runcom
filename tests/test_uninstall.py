@@ -62,3 +62,17 @@ class UninstallTests(unittest.TestCase):
             result = self.run_uninstall(link, data)
             self.assertNotEqual(result.returncode, 0)
             self.assertTrue((folder / 'runcom.py').exists())
+
+    def test_other_installation_menu_entries_are_preserved(self):
+        with tempfile.TemporaryDirectory() as directory:
+            data=Path(directory)
+            folder=data/'runcom'
+            folder.mkdir()
+            (folder/'runcom.py').write_text('app')
+            apps=data/'applications';apps.mkdir()
+            for name in ('runcom.desktop','runcom-uninstall.desktop'):
+                (apps/name).write_text('[Desktop Entry]\nPath='+str(data/'runcom-other')+'\n')
+            result=self.run_uninstall(folder,data)
+            self.assertEqual(result.returncode,0,result.stderr)
+            for name in ('runcom.desktop','runcom-uninstall.desktop'):
+                self.assertTrue((apps/name).exists())

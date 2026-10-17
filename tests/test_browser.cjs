@@ -43,6 +43,19 @@ const server = http.createServer((request,response)=>{
         await page.locator('#version').selectOption('release');
         assert.ok(!(await page.locator('#command').textContent()).includes('--ref main'));
         await page.screenshot({path:path.join(root,`.test-artifacts/${lang}-${width}.png`),fullPage:true});
+        for(const distro of ['arch','ubuntu','debian','mint','fedora','opensuse','alpine']) {
+          await page.locator('#uninstall-os').selectOption(distro);
+          assert.ok((await page.locator('#uninstall-tools').textContent()).length>10);
+          assert.match(await page.locator('#uninstall-command').textContent(),/bash runcom-uninstall.sh/);
+          assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+        }
+        await page.locator('#uninstall-os').selectOption('windows');
+        const [removeDownload]=await Promise.all([page.waitForEvent('download'),page.locator('#uninstaller').click()]);
+        assert.equal(removeDownload.suggestedFilename(),'runcom-uninstall.ps1');
+        assert.ok(fs.readFileSync(await removeDownload.path(),'utf8').includes('[switch]$Yes'));
+        await page.locator('#uninstall-copy').click();
+        await page.waitForFunction(()=>/kopierades|copied/.test(document.getElementById('uninstall-status').textContent));
+        await page.screenshot({path:path.join(root,`.test-artifacts/uninstall-${lang}-${width}.png`),fullPage:true});
         await page.getByRole('link',{name:lang==='sv'?'Hjälp':'Hjälp (svenska)',exact:true}).click();
         assert.ok(page.url().endsWith('/help.html'));
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));

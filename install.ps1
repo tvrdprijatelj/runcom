@@ -93,7 +93,7 @@ finally:
         os.unlink(temporary)
 '@
     Invoke-Python -Exe $py -Arguments @('-c', $copy, (Join-Path $folder 'runcom.py'), $appPath)
-    foreach ($asset in @('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico')) {
+    foreach ($asset in @('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico', 'uninstall.ps1', 'uninstall.sh')) {
         $assetSource = Join-Path $folder $asset
         if (Test-Path $assetSource -PathType Leaf) {
             Invoke-Python -Exe $py -Arguments @('-c', $copy, $assetSource, (Join-Path $InstallDir $asset))
@@ -132,6 +132,20 @@ finally:
             } catch {
                 Write-Warning "Installed successfully, but could not create shortcut: $location"
             }
+        }
+    }
+    if (-not $NoShortcut -and $shell -and (Test-Path (Join-Path $InstallDir 'uninstall.ps1'))) {
+        try {
+            $removeLink = Join-Path ([Environment]::GetFolderPath('Programs')) 'Avinstallera Runcom.lnk'
+            $shortcut = $shell.CreateShortcut($removeLink)
+            $shortcut.TargetPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+            $shortcut.Arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $InstallDir 'uninstall.ps1') + '" -InstallDir "' + $InstallDir + '"'
+            $shortcut.WorkingDirectory = $InstallDir
+            $shortcut.Description = 'Uninstall Runcom; keep personal scripts'
+            $shortcut.Save()
+            Write-Host "Uninstall shortcut created: $removeLink"
+        } catch {
+            Write-Warning 'Could not create the uninstall shortcut. Run uninstall.ps1 from the installation folder.'
         }
     }
     Write-Host "Installed in $InstallDir. Search for Runcom in Start, use the desktop shortcut or run:"

@@ -30,7 +30,8 @@ if folder.exists() and not (folder / 'runcom.py').is_file():
     raise SystemExit('Not a Runcom installation; nothing removed')
 # Only installer-owned files are removed. Extra files in the folder are kept.
 for name in ('runcom.py', 'runcom', 'runcom-language', 'runcom-revision',
-             'help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico'):
+             'help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico',
+             'uninstall.sh', 'uninstall.ps1', 'runcom-uninstall', 'Uninstall Runcom.command'):
     path = folder / name
     if path.is_file() or path.is_symlink():
         path.unlink()
@@ -42,9 +43,29 @@ elif (venv / 'pyvenv.cfg').is_file():
 data_home = pathlib.Path(os.environ.get('XDG_DATA_HOME') or pathlib.Path.home() / '.local/share')
 if not data_home.is_absolute():
     data_home = pathlib.Path.home() / '.local/share'
-entry = data_home / 'applications/runcom.desktop'
-if entry.is_file() and str(folder).replace('\\', '\\\\') in entry.read_text(encoding='utf-8'):
-    entry.unlink()
+def desktop_unescape(text):
+    # Decode the Desktop Entry string escaping, without interpreting arbitrary escapes.
+    result = []
+    chars = iter(text)
+    mapping = {'s': ' ', 'n': '\n', 'r': '\r', 't': '\t', '\\': '\\'}
+    for char in chars:
+        if char == '\\':
+            char = next(chars, '\\')
+            result.append(mapping.get(char, '\\' + char))
+        else:
+            result.append(char)
+    return ''.join(result)
+for name in ('runcom.desktop', 'runcom-uninstall.desktop'):
+    entry = data_home / 'applications' / name
+    if entry.is_file():
+        text = entry.read_text(encoding='utf-8')
+        paths = [line[5:] for line in text.splitlines() if line.startswith('Path=')]
+        own = any(pathlib.Path(desktop_unescape(value)).resolve() == folder for value in paths)
+        # Compatibility with older entries which contained only Exec.
+        if not paths:
+            own = ('"' + str(folder / 'runcom') + '"') in text
+        if own:
+            entry.unlink()
 if folder.exists():
     try:
         folder.rmdir()
