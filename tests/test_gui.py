@@ -89,6 +89,20 @@ class GuiTests(unittest.TestCase):
         self.assertFalse(panel.keep_sudo.get())
 
     @unittest.skipIf(os.name == 'nt', 'Unix sudo session')
+    def test_startup_sudo_requests_fresh_authentication(self):
+        fake_bin = Path(self.folder.name) / 'bin'
+        fake_bin.mkdir()
+        log = Path(self.folder.name) / 'startup-sudo.log'
+        fake = fake_bin / 'sudo'
+        fake.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> ' + runcom.shlex.quote(str(log)) + '\n')
+        fake.chmod(0o700)
+        with patch.dict(os.environ, {'PATH': str(fake_bin) + os.pathsep + os.environ.get('PATH', '')}):
+            self.app.startup_sudo()
+            self.pump_until(lambda: log.exists() and '-k -v' in log.read_text())
+        self.assertEqual(self.app.tabs.select(), str(self.app.terminal))
+        self.assertTrue(self.app.terminal.keep_sudo.get())
+
+    @unittest.skipIf(os.name == 'nt', 'Unix sudo session')
     def test_sudo_script_uses_existing_terminal(self):
         script = Path(self.folder.name) / 'script with spaces.sh'
         script.write_text("printf '\\nsudo-script-ok\\n'\n")
@@ -141,6 +155,36 @@ class GuiTests(unittest.TestCase):
         self.assertIn('kod 0', text)
         self.assertEqual(str(self.app.btn_run['state']), 'normal')
         self.assertEqual(str(self.app.btn_stop['state']), 'disabled')
+
+    def test_run_selected_opens_file_and_shows_output(self):
+        path = Path(self.folder.name) / 'selected file.py'
+        path.write_text('print("selected-run-ok")\n')
+        self.app.refresh_list()
+        self.app.listbox.selection_set(self.app.files.index(path))
+        self.app.open_terminal()
+        self.app.btn_run_selected.invoke()
+        self.pump_until(lambda: self.app.proc is None)
+        self.assertEqual(self.app.current, path)
+        self.assertEqual(self.app.tabs.select(), self.app.tabs.tabs()[0])
+        self.assertIn('selected-run-ok', self.app.output.get('1.0', 'end'))
+
+    def test_open_and_run_file_picker(self):
+        path = Path(self.folder.name) / 'picked.py'
+        path.write_text('print("picked-run-ok")\n')
+        with patch.object(runcom.filedialog, 'askopenfilename', return_value=str(path)):
+            self.app.btn_open_run.invoke()
+        self.pump_until(lambda: self.app.proc is None)
+        self.assertIn('picked-run-ok', self.app.output.get('1.0', 'end'))
+
+    def test_quick_run_cancellation_preserves_unsaved_edits(self):
+        path = Path(self.folder.name) / 'other.py'
+        path.write_text('print("should not run")\n')
+        self.app.editor.insert('1.0', 'unsaved edits')
+        with patch.object(runcom.messagebox, 'askyesnocancel', return_value=None):
+            self.app._open_and_run_path(path)
+        self.assertIsNone(self.app.current)
+        self.assertIsNone(self.app.proc)
+        self.assertEqual(self.app.editor.get('1.0', 'end-1c'), 'unsaved edits')
 
     def test_stop_long_running_script(self):
         path = Path(self.folder.name) / 'wait.py'

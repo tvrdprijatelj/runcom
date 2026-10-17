@@ -49,6 +49,9 @@ def installed_language():
 LANGUAGE = installed_language()
 TRANSLATIONS = {
     'Windows-kommandon: skriv på raden och tryck Enter. Interaktiva konsolprogram körs med F6.': 'Windows commands: type on the input line and press Enter. Use F6 for interactive console programs.',
+    '▶ Kör vald fil': '▶ Run selected file',
+    'Öppna och kör…': 'Open and run…',
+    'Välj en fil i listan först.': 'Select a file in the list first.',
     'Skript': 'Scripts',
     'Terminal': 'Terminal',
     'Terminal (F7)': 'Terminal (F7)',
@@ -198,6 +201,29 @@ def template_for(name):
     if ext in (".bat", ".cmd"):
         return TPL_BAT
     return TPL_BAT if IS_WIN else TPL_UNIX
+
+
+def contains_sudo_command(text):
+    """Recognize explicit sudo commands in ordinary shell command lists."""
+    for line in text.splitlines():
+        lexer = shlex.shlex(line, posix=True, punctuation_chars=';&|()')
+        lexer.whitespace_split = True
+        command_start = True
+        try:
+            for token in lexer:
+                if token and all(char in ';&|()' for char in token):
+                    command_start = True
+                elif command_start:
+                    if token in ('if', 'then', 'elif', 'else', 'do', '!', '{'):
+                        continue
+                    if '=' in token and token.split('=', 1)[0].isidentifier():
+                        continue
+                    if token in ('sudo', '/usr/bin/sudo', '/bin/sudo'):
+                        return True
+                    command_start = False
+        except ValueError:
+            continue  # An unfinished line is left to the script interpreter.
+    return False
 
 
 def atomic_write(path, text, encoding, executable=False, exclusive=False):
@@ -515,7 +541,7 @@ class TerminalPanel(tk.Frame):
             pass
         return 'break'
 
-    def toggle_sudo(self):
+    def toggle_sudo(self, fresh=False):
         if not shutil.which('sudo'):
             self.keep_sudo.set(False)
             messagebox.showerror(tr('Fel'), tr('Kommandot sudo hittades inte.'), parent=self)
@@ -530,7 +556,8 @@ class TerminalPanel(tk.Frame):
                        "stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, "
                        "stderr=subprocess.DEVNULL) != 0: break\n")
             helper = shlex.join([python_executable(), '-c', refresh, shutil.which('sudo')])
-            command = ("sudo -v && { " + helper + " & __runcom_sudo_keeper=$!; "
+            validation = "sudo -k -v" if fresh else "sudo -v"
+            command = (validation + " && { " + helper + " & __runcom_sudo_keeper=$!; "
                        "trap 'kill \"$__runcom_sudo_keeper\" 2>/dev/null' EXIT; }")
         else:
             command = ('if [ -n "${__runcom_sudo_keeper:-}" ]; then '
@@ -732,6 +759,12 @@ class App(tk.Tk):
         sb.config(command=self.listbox.yview)
         self.listbox.bind("<Double-Button-1>", self._on_list_open)
         self.listbox.bind("<Return>", self._on_list_open)
+        self.listbox.bind('<Control-Return>', lambda e: self._shortcut(self.run_selected))
+        self.btn_run_selected = tk.Button(left, text=tr('▶ Kör vald fil'),
+                                         command=self.run_selected, bg="#2e7d32", fg="white")
+        self.btn_run_selected.pack(fill="x", padx=8, pady=(8, 4))
+        self.btn_open_run = tk.Button(left, text=tr('Öppna och kör…'), command=self.open_and_run)
+        self.btn_open_run.pack(fill="x", padx=8, pady=(0, 8))
         main.add(left, minsize=180, width=230)
 
         # Höger: editor + utdata
@@ -779,6 +812,14 @@ class App(tk.Tk):
         if self.tabs.select() == str(self.terminal):
             self.terminal.start()
             self.terminal.focus_terminal()
+
+    def startup_sudo(self):
+        """Authenticate in the same PTY used for subsequent sudo commands."""
+        if IS_WIN or self._closing or not shutil.which('sudo'):
+            return
+        self.open_terminal()
+        self.terminal.keep_sudo.set(True)
+        self.terminal.toggle_sudo(fresh=True)
 
     def open_terminal(self):
         self.tabs.select(self.terminal)
@@ -871,6 +912,28 @@ class App(tk.Tk):
         if sel:
             self.load_path(self.files[sel[0]])
 
+    def run_selected(self):
+        if self.proc is not None:
+            return
+        selection = self.listbox.curselection()
+        if not selection:
+            self._set_status(tr('Välj en fil i listan först.'))
+            return
+        self._open_and_run_path(self.files[selection[0]])
+
+    def open_and_run(self):
+        if self.proc is not None:
+            return
+        path = filedialog.askopenfilename(initialdir=self.folder, title=tr('Öppna och kör…'))
+        if path:
+            self._open_and_run_path(Path(path))
+
+    def _open_and_run_path(self, path):
+        if Path(path).absolute() != self.current and not self.load_path(path):
+            return
+        self.tabs.select(0)
+        self.run_in_app()
+
     # ---------------------------------------------------------- filåtgärder
     def new_file(self):
         if not self._confirm_discard():
@@ -911,16 +974,16 @@ class App(tk.Tk):
     def load_path(self, path):
         path = Path(path).absolute()
         if path == self.current and not self._dirty():
-            return
+            return True
         if not self._confirm_discard():
-            return
+            return False
         try:
             snapshot = path.read_bytes()
             text = snapshot.decode(file_encoding(path))
             text = text.replace("\r\n", "\n").replace("\r", "\n")
         except (OSError, UnicodeDecodeError) as e:
             messagebox.showerror(tr('Kunde inte öppna'), str(e))
-            return
+            return False
         if path.parent != self.folder:
             self.folder = path.parent
         self.current = path
@@ -928,6 +991,7 @@ class App(tk.Tk):
         self._set_text(text)
         self.refresh_list()
         self._set_status('{0}{1}'.format(tr('Öppnade '), path))
+        return True
 
     def save(self):
         if self.current is None:
@@ -1033,6 +1097,10 @@ class App(tk.Tk):
         if not self._prepare_run():
             return
         path = self.current
+        if (not IS_WIN and path.suffix.lower() in ('.sh', '.bash', '.zsh', '.ksh')
+                and contains_sudo_command(self.editor.get('1.0', 'end-1c'))):
+            self.run_with_sudo()
+            return
         try:
             cmd = self._command_for(path)
         except (OSError, ValueError) as error:
@@ -1270,7 +1338,9 @@ if __name__ == "__main__":
         except Exception:
             pass
     try:
-        App().mainloop()
+        app = App()
+        app.after_idle(app.startup_sudo)
+        app.mainloop()
     except tk.TclError as error:
         print('{0}{1}'.format(tr('Runcom kunde inte starta det grafiska gränssnittet: '), error), file=sys.stderr)
         sys.exit(1)
