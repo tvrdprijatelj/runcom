@@ -1,9 +1,46 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Create, edit and run scripts in one focused workspace. Read output immediately or use a terminal for interactive commands."><title>Runcom — Write and run scripts</title><link rel="stylesheet" href="style.css?v=14822a7832"><script defer src="download.js?v=d4f997a66d"></script></head><body>
-<nav aria-label="Main navigation"><a class="brand" href="index.html">runcom<span>_</span></a><div><a class="button secondary nav-help" href="help.html" lang="sv">Hjälp (svenska)</a><a href="download_sv.html" lang="sv">Svenska</a><a href="https://github.com/tvrdprijatelj/runcom">GitHub ↗</a></div></nav>
-<main><section class="hero"><div><div class="eyebrow">Linux · macOS · Windows</div><h1>Your scripts. One workspace.</h1><p>Create, edit and run scripts in one focused workspace. Read output immediately or use a terminal for interactive commands.</p><div class="actions"><a class="button" href="#install">Get started ↓</a><a class="button secondary" href="https://github.com/tvrdprijatelj/runcom/releases/latest">Latest release</a></div><p>Python 3.8+ · Tkinter · Open source</p></div><div class="preview" aria-label="Example script and output"><div class="windowbar">runcom / hello.sh</div><div class="code">#!/usr/bin/env bash<br><b>echo</b> "Hello from Runcom!"</div><div class="result">› Hello from Runcom!<br>✓ Finished with exit code 0</div></div></section>
-<div class="grid"><section class="panel"><h2>01 · Write</h2><p>Start with a script template. Search your files and save with Ctrl+S.</p></section><section class="panel"><h2>02 · Run</h2><p>F5 runs inside the app. F6 opens a terminal for scripts that need input.</p></section><section class="panel"><h2>03 · Read the result</h2><p>See output and exit codes. Stop a running script with one button.</p></section></div>
-<section class="panel" id="install"><div class="eyebrow">Installation</div><h2>Choose your operating system</h2><p>Choose the current fixes on main or the latest published release. The app is saved in your user directory. Run the installer again to update.</p><label for="os">Operating system</label> <select id="os"><option value="arch">Arch Linux</option><option value="ubuntu">Ubuntu / Debian</option><option value="fedora">Fedora</option><option value="mac">macOS</option><option value="windows">Windows</option><option value="linux">Other Linux</option></select>
-<p><label for="version">Version</label> <select id="version"><option value="main">Current fixes (main)</option><option value="release">Latest published release</option></select></p><ol><li>Install prerequisites if needed.<pre id="prerequisites"></pre></li><li>Download and inspect the installer.<div class="actions"><a id="installer" class="button" href="install.sh" download="runcom-install.sh">Download installer</a></div></li><li>Fetch a fresh installer and run it from your terminal.<pre id="command"></pre><button id="copy" type="button">Copy command</button></li></ol><p id="status" role="status" aria-live="polite"></p><p id="launch"></p><noscript><p>Linux/macOS: <a href="install.sh" download>install.sh</a> · Windows: <a href="install.ps1" download>install.ps1</a></p><pre>bash install.sh
-# Windows PowerShell:
-powershell -ExecutionPolicy Bypass -File .\install.ps1</pre></noscript>
-<details><summary>Manual launch and troubleshooting</summary><p>You can also download the source and run python3 runcom.py (Windows: py runcom.py). Install Tkinter through your system, not pip. Use the terminal (F6) for scripts that ask for input or passwords.</p><a href="https://github.com/tvrdprijatelj/runcom/archive/refs/heads/main.zip">Download current source (main)</a></details></section></main><footer>Runcom · A focused tool for your scripts. · <a href="https://github.com/tvrdprijatelj/runcom">Source and documentation</a></footer></body></html>
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="description" content="Runcom har en underhållspaus. Vi är tillbaka snart. / Runcom is down for maintenance. We'll be back soon.">
+  <title>Runcom — Underhåll / Maintenance</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; background: #0c121c; color: #e6edf7; font: 16px/1.65 system-ui, sans-serif; }
+    header, main, footer { width: 100%; max-width: 1080px; margin-inline: auto; padding: 24px; }
+    header { border-bottom: 1px solid #263245; }
+    .brand { font-size: 25px; font-weight: 800; letter-spacing: -.04em; }
+    .brand span { color: #83ceff; }
+    main { flex: 1; display: grid; align-content: center; padding-block: 64px; }
+    .status { display: inline-flex; align-items: center; gap: 10px; width: fit-content; padding: 6px 12px; border: 1px solid #57482c; border-radius: 999px; background: #272219; color: #f1cd85; font-size: 13px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    h1 { max-width: 800px; margin: 28px 0 20px; font-size: clamp(40px, 7vw, 76px); line-height: 1.08; letter-spacing: -.05em; }
+    p { max-width: 580px; color: #aebed3; margin: 0 0 20px; }
+    .english { max-width: 580px; margin-top: 28px; padding-top: 24px; border-top: 1px solid #263245; }
+    h2 { margin: 0 0 10px; font-size: 22px; line-height: 1.3; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+    a { color: #83ceff; }
+    .button { display: inline-block; padding: 12px 20px; border-radius: 9px; background: #83ceff; color: #0d1b2a; font-weight: 700; text-decoration: none; touch-action: manipulation; }
+    a:focus-visible { outline: 3px solid #b2e7ff; outline-offset: 4px; }
+    footer { border-top: 1px solid #263245; color: #9aacc3; font-size: 13px; }
+    @media (max-width: 480px) { header, main, footer { padding-inline: 20px; } main { padding-block: 40px; } }
+  </style>
+</head>
+<body>
+  <header><div class="brand">runcom<span>_</span></div></header>
+  <main>
+    <div class="status"><span class="dot" aria-hidden="true"></span>Underhåll pågår / Maintenance</div>
+    <h1>En liten paus.<br>Vi är snart tillbaka.</h1>
+    <p>Vi gör underhåll på Runcoms webbplats. Tack för ditt tålamod! Försök igen lite senare.</p>
+    <section class="english" lang="en" aria-labelledby="english-title">
+      <h2 id="english-title">Down for maintenance</h2>
+      <p>We're performing maintenance on the Runcom website. Thanks for your patience! Please check back later.</p>
+    </section>
+    <div class="actions"><a class="button" href="https://github.com/tvrdprijatelj/runcom">Öppna GitHub / Open GitHub ↗</a></div>
+  </main>
+  <footer>Runcom · Linux · macOS · Windows</footer>
+</body>
+</html>

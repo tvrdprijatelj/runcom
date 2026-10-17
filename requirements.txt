@@ -1,2 +1,0 @@
-# Runcom uses only the Python standard library.
-# Tkinter must be provided by your Python / operating system installation.

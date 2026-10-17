@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="description" content="Runcom har en underhållspaus. Vi är tillbaka snart. / Runcom is down for maintenance. We'll be back soon.">
+  <title>Runcom — Underhåll / Maintenance</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; background: #0c121c; color: #e6edf7; font: 16px/1.65 system-ui, sans-serif; }
+    header, main, footer { width: 100%; max-width: 1080px; margin-inline: auto; padding: 24px; }
+    header { border-bottom: 1px solid #263245; }
+    .brand { font-size: 25px; font-weight: 800; letter-spacing: -.04em; }
+    .brand span { color: #83ceff; }
+    main { flex: 1; display: grid; align-content: center; padding-block: 64px; }
+    .status { display: inline-flex; align-items: center; gap: 10px; width: fit-content; padding: 6px 12px; border: 1px solid #57482c; border-radius: 999px; background: #272219; color: #f1cd85; font-size: 13px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    h1 { max-width: 800px; margin: 28px 0 20px; font-size: clamp(40px, 7vw, 76px); line-height: 1.08; letter-spacing: -.05em; }
+    p { max-width: 580px; color: #aebed3; margin: 0 0 20px; }
+    .english { max-width: 580px; margin-top: 28px; padding-top: 24px; border-top: 1px solid #263245; }
+    h2 { margin: 0 0 10px; font-size: 22px; line-height: 1.3; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+    a { color: #83ceff; }
+    .button { display: inline-block; padding: 12px 20px; border-radius: 9px; background: #83ceff; color: #0d1b2a; font-weight: 700; text-decoration: none; touch-action: manipulation; }
+    a:focus-visible { outline: 3px solid #b2e7ff; outline-offset: 4px; }
+    footer { border-top: 1px solid #263245; color: #9aacc3; font-size: 13px; }
+    @media (max-width: 480px) { header, main, footer { padding-inline: 20px; } main { padding-block: 40px; } }
+  </style>
+</head>
+<body>
+  <header><div class="brand">runcom<span>_</span></div></header>
+  <main>
+    <div class="status"><span class="dot" aria-hidden="true"></span>Underhåll pågår / Maintenance</div>
+    <h1>En liten paus.<br>Vi är snart tillbaka.</h1>
+    <p>Vi gör underhåll på Runcoms webbplats. Tack för ditt tålamod! Försök igen lite senare.</p>
+    <section class="english" lang="en" aria-labelledby="english-title">
+      <h2 id="english-title">Down for maintenance</h2>
+      <p>We're performing maintenance on the Runcom website. Thanks for your patience! Please check back later.</p>
+    </section>
+    <div class="actions"><a class="button" href="https://github.com/tvrdprijatelj/runcom">Öppna GitHub / Open GitHub ↗</a></div>
+  </main>
+  <footer>Runcom · Linux · macOS · Windows</footer>
+</body>
+</html>
