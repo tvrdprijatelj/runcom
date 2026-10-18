@@ -151,6 +151,39 @@ class GuiTests(unittest.TestCase):
         self.assertFalse(window.winfo_exists())
 
     @unittest.skipIf(os.name == 'nt', 'Unix sudo session')
+    def test_startup_sudo_opens_graphical_dialog_and_accepts_password(self):
+        fake_bin = Path(self.folder.name) / 'graphical-bin'
+        fake_bin.mkdir()
+        log = Path(self.folder.name) / 'graphical-sudo.log'
+        fake = fake_bin / 'sudo'
+        fake.write_text(
+            '#!/bin/sh\n'
+            'case "$1" in\n'
+            '  -k) exit 0;;\n'
+            '  -n) exit 1;;\n'
+            '  -p)\n'
+            '    printf "%s" "$2" >&2\n'
+            '    stty -echo\n'
+            '    IFS= read -r password\n'
+            '    stty echo\n'
+            '    printf "\\n" >&2\n'
+            '    if [ "$password" = graphical-secret ]; then\n'
+            '      printf "accepted\\n" >> ' + runcom.shlex.quote(str(log)) + '\n'
+            '      exit 0\n'
+            '    fi\n'
+            '    exit 1;;\n'
+            'esac\n')
+        fake.chmod(0o700)
+        with patch.dict(os.environ, {'PATH': str(fake_bin) + os.pathsep + os.environ.get('PATH', '')}):
+            self.app.startup_sudo()
+            self.pump_until(lambda: getattr(self.app, '_sudo_password_window', None) is not None)
+            self.app._sudo_password_entry.insert(0, 'graphical-secret')
+            self.app._sudo_password_entry.event_generate('<Return>')
+            self.pump_until(lambda: log.exists() and 'accepted' in log.read_text())
+            self.pump_until(lambda: self.app.terminal.sudo_state.get() == 'Sudo: aktivt under appsessionen')
+        self.assertNotIn('graphical-secret', self.app.terminal.display.get('1.0', 'end'))
+
+    @unittest.skipIf(os.name == 'nt', 'Unix sudo session')
     def test_sudo_script_uses_existing_terminal(self):
         script = Path(self.folder.name) / 'script with spaces.sh'
         script.write_text("printf '\\nsudo-script-ok\\n'\n")
