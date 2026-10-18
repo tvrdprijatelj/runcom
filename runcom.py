@@ -259,7 +259,7 @@ TRANSLATIONS = {
     'Rensa terminalen': 'Clear terminal',
     'Håll sudo aktivt i sessionen': 'Keep sudo active for this session',
     'Sudo: inte aktivt': 'Sudo: inactive',
-    'Sudo: väntar på lösenord i terminalen': 'Sudo: waiting for password in the terminal',
+    'Sudo: väntar på lösenord': 'Sudo: waiting for password',
     'Sudo: aktivt under appsessionen': 'Sudo: active for the app session',
     'Sudo: autentiseringen avbröts eller löpte ut': 'Sudo: authentication was cancelled or expired',
     'Aktivera sudo': 'Enable sudo',
@@ -269,7 +269,7 @@ TRANSLATIONS = {
     'Lösenord': 'Password',
     'Fortsätt': 'Continue',
     'Avbryt': 'Cancel',
-    'Sudo-lösenordet skrivs direkt i terminalen och sparas aldrig av Runcom. Systemets sudo-behörighet hålls aktiv medan appen är öppen.': 'Enter the sudo password directly in the terminal. Runcom never stores it. The system sudo authorization is kept active while the app is open.',
+    'Runcom visar en grafisk lösenordsdialog och sparar aldrig lösenordet. Systemets sudo-behörighet hålls aktiv medan appen är öppen.': 'Runcom uses a graphical password dialog and never stores the password. The system sudo authorization is kept active while the app is open.',
     'Kommandoterminal · Ctrl+C avbryter · Ctrl+Shift+V klistrar in. Helskärmsprogram körs med F6.': 'Command terminal · Ctrl+C interrupts · Ctrl+Shift+V pastes. Use F6 for full-screen programs.',
     'Kunde inte starta terminalen': 'Could not start the terminal',
     'Ny terminalsession': 'New terminal session',
@@ -860,7 +860,7 @@ class TerminalPanel(tk.Frame):
             self.sudo_state.set(tr('Sudo: aktivt under appsessionen'))
         elif active is None:
             self.keep_sudo.set(True)
-            self.sudo_state.set(tr('Sudo: väntar på lösenord i terminalen'))
+            self.sudo_state.set(tr('Sudo: väntar på lösenord'))
         else:
             self.keep_sudo.set(False)
             self.sudo_state.set(tr('Sudo: inte aktivt'))
@@ -1356,7 +1356,7 @@ class App(tk.Tk):
                 self.activate_sudo(show_error=True, graphical=True)
             tk.Label(frame, text='Sudo', bg=c["surface"], fg=c["text"],
                      font=('TkDefaultFont', 12, 'bold')).pack(anchor='w')
-            tk.Label(frame, text=tr('Sudo-lösenordet skrivs direkt i terminalen och sparas aldrig av Runcom. Systemets sudo-behörighet hålls aktiv medan appen är öppen.'),
+            tk.Label(frame, text=tr('Runcom visar en grafisk lösenordsdialog och sparar aldrig lösenordet. Systemets sudo-behörighet hålls aktiv medan appen är öppen.'),
                      bg=c["surface"], fg=c["muted"], wraplength=420,
                      justify='left').pack(anchor='w', pady=(8, 4))
             tk.Label(frame, textvariable=self.terminal.sudo_state, bg=c["surface"],
