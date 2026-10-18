@@ -631,7 +631,8 @@ class TerminalSession:
 
 class TerminalPanel(tk.Frame):
     def __init__(self, parent, app):
-        super().__init__(parent)
+        c = app.colors
+        super().__init__(parent, bg=c["surface"], padx=12, pady=12)
         self.app = app
         self.session = None
         self.escape = ''
@@ -640,33 +641,41 @@ class TerminalPanel(tk.Frame):
         self.sudo_active = False
         self.sudo_state = tk.StringVar(value=tr('Sudo: inte aktivt'))
         self._sudo_control_buffer = ''
-        toolbar = tk.Frame(self)
-        toolbar.pack(fill='x')
-        tk.Button(toolbar, text=tr('Starta om terminal'), command=self.restart).pack(side='left')
-        self.btn_clear = tk.Button(toolbar, text=tr('Rensa terminalen'), command=self.clear)
+        toolbar = tk.Frame(self, bg=c["surface"])
+        toolbar.pack(fill='x', pady=(0, 8))
+        tk.Label(toolbar, text=tr('Terminal').upper(), bg=c["surface"], fg=c["text"],
+                 font=("TkDefaultFont", 11, "bold")).pack(side='left', padx=(0, 12))
+        app._button(toolbar, tr('Starta om terminal'), self.restart).pack(side='left')
+        self.btn_clear = app._button(toolbar, tr('Rensa terminalen'), self.clear)
         self.btn_clear.pack(side='right')
         if not IS_WIN:
-            tk.Checkbutton(toolbar, text=tr('Håll sudo aktivt i sessionen'),
-                           variable=self.keep_sudo, command=self.toggle_sudo).pack(side='left')
-            tk.Label(toolbar, textvariable=self.sudo_state, fg='#a5b5cc').pack(side='left', padx=10)
+            tk.Checkbutton(toolbar, text=tr('Håll sudo aktivt i sessionen'), bg=c["surface"],
+                           fg=c["text"], activebackground=c["surface"], activeforeground=c["text"],
+                           selectcolor=c["editor"], variable=self.keep_sudo,
+                           command=self.toggle_sudo).pack(side='left', padx=(12, 0))
+            tk.Label(toolbar, textvariable=self.sudo_state, bg=c["surface"],
+                     fg=c["muted"]).pack(side='left', padx=10)
         hint = ('Windows-kommandon: skriv på raden och tryck Enter. Interaktiva konsolprogram körs med F6.' if IS_WIN else
                 'Kommandoterminal · Ctrl+C avbryter · Ctrl+Shift+V klistrar in. Helskärmsprogram körs med F6.')
-        tk.Label(self, text=tr(hint),
-                 anchor='w', wraplength=750).pack(fill='x', padx=8)
-        body = tk.Frame(self)
+        tk.Label(self, text=tr(hint), bg=c["surface"], fg=c["muted"],
+                 anchor='w', wraplength=750).pack(fill='x', pady=(0, 8))
+        body = tk.Frame(self, bg=c["terminal"], highlightbackground=c["border"], highlightthickness=1)
         body.pack(fill='both', expand=True)
         scroll = tk.Scrollbar(body)
         scroll.pack(side='right', fill='y')
         self.display = tk.Text(body, state='disabled', wrap='char', font=app.mono,
-                               bg='#111b29', fg='#e4ecf7', insertbackground='#77c7ff',
+                               bg=c["terminal"], fg=c["text"], insertbackground=c["blue"],
+                               selectbackground=c["selection"], relief="flat", padx=16, pady=14,
                                yscrollcommand=scroll.set, takefocus=True)
         self.display.pack(fill='both', expand=True)
         scroll.config(command=self.display.yview)
         self.display.mark_set('terminal_cursor', '1.0')
         self.display.mark_gravity('terminal_cursor', 'right')
         if IS_WIN:
-            self.line = tk.Entry(self, bg='#111b29', fg='#e4ecf7', insertbackground='white')
-            self.line.pack(fill='x')
+            self.line = tk.Entry(self, bg=c["editor"], fg=c["text"], insertbackground=c["blue"],
+                                 relief="flat", highlightthickness=1,
+                                 highlightbackground=c["border"], highlightcolor=c["blue"])
+            self.line.pack(fill='x', ipady=7, pady=(8, 0))
             self.line.bind('<Return>', self.send_line)
         else:
             self.display.bind('<KeyPress>', self.key)
@@ -934,10 +943,12 @@ def terminal_child(shell):
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.colors = THEME
         self.title("Runcom")
         icon_dir = Path(__file__).resolve().parent
         try:
             self._app_icon = tk.PhotoImage(file=str(icon_dir / "runcom.png"))
+            self._header_logo = self._app_icon.subsample(4, 4)
             self.iconphoto(True, self._app_icon)
             if IS_WIN:
                 self.iconbitmap(default=str(icon_dir / "runcom.ico"))
@@ -975,36 +986,85 @@ class App(tk.Tk):
         self._queue_after = self.after(50, self._drain_queue)
 
     # ------------------------------------------------------------------ UI
+    def _button(self, parent, text, command, kind="secondary", **options):
+        palette = {
+            "primary": (self.colors["green"], self.colors["green_hover"]),
+            "accent": (self.colors["blue"], self.colors["blue_hover"]),
+            "danger": (self.colors["red"], self.colors["red_hover"]),
+            "secondary": (self.colors["surface_alt"], "#22364d"),
+        }
+        background, active = palette[kind]
+        config = dict(
+            text=text, command=command, bg=background, fg="white",
+            activebackground=active, activeforeground="white",
+            disabledforeground=self.colors["faint"], relief="flat", borderwidth=0,
+            highlightthickness=0, padx=13, pady=7, cursor="hand2",
+        )
+        config.update(options)
+        return tk.Button(parent, **config)
+
     def _build_ui(self):
-        self.configure(bg="#101722")
+        c = self.colors
+        self.configure(bg=c["bg"])
         self.option_add("*Font", "{Segoe UI} 10" if IS_WIN else "{DejaVu Sans} 10")
-        self.option_add("*Background", "#182231")
-        self.option_add("*Foreground", "#e4ecf7")
+        self.option_add("*Background", c["surface"])
+        self.option_add("*Foreground", c["text"])
         self.option_add("*Button.Relief", "flat")
         self.option_add("*Button.BorderWidth", 0)
         self.option_add("*Button.Padx", 12)
         self.option_add("*Button.Pady", 7)
-        self.option_add("*Button.ActiveBackground", "#30435e")
+        self.option_add("*Button.ActiveBackground", c["surface_alt"])
         self.option_add("*Button.ActiveForeground", "#ffffff")
-        self.option_add("*Button.DisabledForeground", "#718198")
-        header = tk.Frame(self, padx=18, pady=14, bg="#101722")
+        self.option_add("*Button.DisabledForeground", c["faint"])
+
+        style = ttk.Style(self)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        style.configure("Runcom.TNotebook", background=c["bg"], borderwidth=0, tabmargins=(0, 0, 0, 0))
+        style.configure("Runcom.TNotebook.Tab", background=c["surface"], foreground=c["muted"],
+                        borderwidth=0, padding=(20, 10), font=("TkDefaultFont", 10, "bold"))
+        style.map("Runcom.TNotebook.Tab",
+                  background=[("selected", c["surface_alt"]), ("active", "#1c2d41")],
+                  foreground=[("selected", c["text"]), ("active", c["text"])])
+
+        header = tk.Frame(self, padx=18, pady=10, bg=c["header"])
         header.pack(fill="x")
-        tk.Label(header, text="runcom", font=("TkDefaultFont", 23, "bold"),
-                 bg="#101722", fg="#77c7ff").pack(side="left")
-        tk.Label(header, text=tr('Skriv. Kör. Se resultatet.'), bg="#101722",
-                 fg="#a5b5cc", padx=20).pack(side="left")
-        self.btn_settings = tk.Button(header, text=tr('Inställningar'), command=self.open_settings)
-        self.btn_settings.pack(side="right", padx=6)
-        self.btn_help = tk.Button(header, text=tr('Hjälp'), command=self.open_help,
-                                  bg="#23334a", fg="#e4ecf7")
-        self.btn_help.pack(side="right")
-        self.btn_update = tk.Button(header, text="Uppdatera" if LANGUAGE == "sv" else "Update",
-                                    command=self.check_update)
-        self.btn_update.pack(side="right", padx=6)
-        self.btn_terminal = tk.Button(header, text=tr('Terminal (F7)'), command=self.open_terminal)
-        self.btn_terminal.pack(side="right", padx=6)
-        bar = tk.Frame(self, padx=12, pady=6)
-        bar.pack(fill="x")
+        brand = tk.Frame(header, bg=c["header"])
+        brand.pack(side="left", fill="y")
+        if hasattr(self, "_header_logo"):
+            self.logo_label = tk.Label(brand, image=self._header_logo, bg=c["header"], bd=0)
+        else:
+            self.logo_label = tk.Label(brand, text=">_R", width=4, bg=c["surface_alt"],
+                                       fg=c["blue"], font=("TkFixedFont", 17, "bold"))
+        self.logo_label.pack(side="left", padx=(0, 12))
+        brand_copy = tk.Frame(brand, bg=c["header"])
+        brand_copy.pack(side="left", anchor="w", pady=6)
+        tk.Label(brand_copy, text="Runcom", font=("TkDefaultFont", 20, "bold"),
+                 bg=c["header"], fg=c["text"]).pack(anchor="w")
+        tk.Label(brand_copy, text=tr('Skriv. Kör. Se resultatet.'), bg=c["header"],
+                 fg=c["muted"], font=("TkDefaultFont", 9)).pack(anchor="w")
+
+        header_actions = tk.Frame(header, bg=c["header"])
+        header_actions.pack(side="right", anchor="e", pady=8)
+        self.btn_settings = self._button(header_actions, tr('Inställningar'), self.open_settings)
+        self.btn_settings.pack(side="right", padx=(6, 0))
+        self.btn_help = self._button(header_actions, tr('Hjälp'), self.open_help)
+        self.btn_help.pack(side="right", padx=(6, 0))
+        self.btn_update = self._button(header_actions, "Uppdatera" if LANGUAGE == "sv" else "Update",
+                                       self.check_update)
+        self.btn_update.pack(side="right", padx=(6, 0))
+        self.btn_terminal = self._button(header_actions, tr('Terminal (F7)'), self.open_terminal,
+                                         kind="accent")
+        self.btn_terminal.pack(side="right")
+        tk.Frame(self, height=1, bg=c["border"]).pack(fill="x")
+
+        bar = tk.Frame(self, padx=12, pady=8, bg=c["surface"],
+                       highlightbackground=c["border"], highlightthickness=1)
+        bar.pack(fill="x", padx=14, pady=(12, 6))
+        tk.Label(bar, text=tr('FILÅTGÄRDER'), bg=c["surface"], fg=c["muted"],
+                 font=("TkDefaultFont", 8, "bold"), padx=4).pack(side="left", padx=(0, 8))
         buttons = [
             ('{0}{1}+N)'.format(tr('Ny ('), MOD), self.new_file),
             ('{0}{1}+O)'.format(tr('Öppna… ('), MOD), self.open_file),
@@ -1014,76 +1074,96 @@ class App(tk.Tk):
             (tr('Byt mapp…'), self.change_folder),
         ]
         for text, cmd in buttons:
-            tk.Button(bar, text=text, command=cmd).pack(side="left", padx=2)
+            self._button(bar, text, cmd).pack(side="left", padx=3)
 
-        runbar = tk.Frame(self, padx=12, pady=8)
-        runbar.pack(fill="x")
+        runbar = tk.Frame(self, padx=12, pady=8, bg=c["surface"],
+                          highlightbackground=c["border"], highlightthickness=1)
+        runbar.pack(fill="x", padx=14, pady=(0, 10))
         bar = runbar
-        self.btn_run = tk.Button(bar, text=tr('▶ Kör här (F5)'), command=self.run_in_app,
-                                 bg="#2e7d32", fg="white", activebackground="#1b5e20")
-        self.btn_run.pack(side="left", padx=2)
-        self.btn_stop = tk.Button(bar, text=tr('■ Stoppa'), command=self.stop, state="disabled")
-        self.btn_stop.pack(side="left", padx=2)
-        tk.Button(bar, text=tr('Kör i terminal (F6)'), command=self.run_in_terminal).pack(side="left", padx=2)
-
-        tk.Frame(bar, width=20).pack(side="left")
+        tk.Label(bar, text=tr('KÖRNING'), bg=c["surface"], fg=c["muted"],
+                 font=("TkDefaultFont", 8, "bold"), padx=4).pack(side="left", padx=(0, 8))
+        self.btn_run = self._button(bar, tr('▶ Kör här (F5)'), self.run_in_app, kind="primary",
+                                    font=("TkDefaultFont", 10, "bold"))
+        self.btn_run.pack(side="left", padx=3)
+        self.btn_stop = self._button(bar, tr('■ Stoppa'), self.stop, state="disabled")
+        self.btn_stop.pack(side="left", padx=3)
+        self._button(bar, tr('Kör i terminal (F6)'), self.run_in_terminal).pack(side="left", padx=3)
         if IS_WIN:
-            tk.Button(bar, text=tr('Kör som admin'), command=self.run_as_admin).pack(side="left", padx=2)
+            self._button(bar, tr('Kör som admin'), self.run_as_admin, kind="accent").pack(side="left", padx=3)
         else:
-            tk.Button(bar, text=tr('Kör med sudo (F8)'), command=self.run_with_sudo).pack(side="left", padx=2)
+            self._button(bar, tr('Kör med sudo (F8)'), self.run_with_sudo,
+                         kind="accent").pack(side="left", padx=3)
 
-        self.tabs = ttk.Notebook(self)
-        self.tabs.pack(fill="both", expand=True)
-        script_tab = tk.Frame(self.tabs)
+        self.tabs = ttk.Notebook(self, style="Runcom.TNotebook")
+        self.tabs.pack(fill="both", expand=True, padx=14, pady=(0, 10))
+        script_tab = tk.Frame(self.tabs, bg=c["bg"])
         self.tabs.add(script_tab, text=tr('Skript'))
         self.terminal = TerminalPanel(self.tabs, self)
         self.tabs.add(self.terminal, text=tr('Terminal'))
         self.tabs.bind('<<NotebookTabChanged>>', self._tab_changed)
-        main = tk.PanedWindow(script_tab, orient="horizontal", sashwidth=5)
+        main = tk.PanedWindow(script_tab, orient="horizontal", sashwidth=7, bg=c["border"],
+                              borderwidth=0, relief="flat")
         main.pack(fill="both", expand=True)
 
         # Vänster: fillista
-        left = tk.Frame(main)
-        self.folder_label = tk.Label(left, anchor="w", fg="#a5b5cc", text="")
-        self.folder_label.pack(fill="x", padx=4, pady=(4, 0))
-        lf = tk.Frame(left)
-        lf.pack(fill="both", expand=True, padx=4, pady=4)
+        left = tk.Frame(main, bg=c["surface"], padx=12, pady=12)
+        tk.Label(left, text=tr('Skript').upper(), anchor="w", bg=c["surface"], fg=c["text"],
+                 font=("TkDefaultFont", 11, "bold")).pack(fill="x")
+        self.folder_label = tk.Label(left, anchor="w", justify="left", fg=c["muted"],
+                                     bg=c["surface"], text="", wraplength=220,
+                                     font=("TkDefaultFont", 8))
+        self.folder_label.pack(fill="x", pady=(3, 12))
+        tk.Label(left, text=tr('Sök skript…'), anchor="w", bg=c["surface"], fg=c["muted"],
+                 font=("TkDefaultFont", 8, "bold")).pack(fill="x")
+        self.search = tk.StringVar()
+        search = tk.Entry(left, textvariable=self.search, bg=c["editor"], fg=c["text"],
+                          insertbackground=c["blue"], relief="flat", highlightthickness=1,
+                          highlightbackground=c["border"], highlightcolor=c["blue"])
+        search.pack(fill="x", ipady=7, pady=(5, 10))
+        self.search.trace_add("write", lambda *_: self.refresh_list())
+        lf = tk.Frame(left, bg=c["surface"])
+        lf.pack(fill="both", expand=True)
         sb = tk.Scrollbar(lf)
         sb.pack(side="right", fill="y")
-        self.search = tk.StringVar()
-        search = tk.Entry(left, textvariable=self.search, bg="#101722", fg="#e4ecf7",
-                          insertbackground="white", relief="flat")
-        search.pack(fill="x", padx=8, pady=8, before=lf)
-        tk.Label(left, text=tr('Sök filnamn · dubbelklicka för att öppna'), fg="#a5b5cc",
-                 font=("TkDefaultFont", 9)).pack(fill="x", before=search)
-        self.search.trace_add("write", lambda *_: self.refresh_list())
         self.listbox = tk.Listbox(lf, yscrollcommand=sb.set, exportselection=False, activestyle="none",
-                                 bg="#101722", fg="#e4ecf7", selectbackground="#285a85",
-                                 selectforeground="white", relief="flat", borderwidth=0)
+                                 bg=c["editor"], fg=c["text"], selectbackground=c["selection"],
+                                 selectforeground="white", relief="flat", borderwidth=0,
+                                 highlightthickness=1, highlightbackground=c["border"],
+                                 highlightcolor=c["blue"])
         self.listbox.pack(side="left", fill="both", expand=True)
         sb.config(command=self.listbox.yview)
         self.listbox.bind("<Double-Button-1>", self._on_list_open)
         self.listbox.bind("<Return>", self._on_list_open)
         self.listbox.bind('<Control-Return>', lambda e: self._shortcut(self.run_selected))
-        self.btn_run_selected = tk.Button(left, text=tr('▶ Kör vald fil'),
-                                         command=self.run_selected, bg="#2e7d32", fg="white")
-        self.btn_run_selected.pack(fill="x", padx=8, pady=(8, 4))
-        self.btn_open_run = tk.Button(left, text=tr('Öppna och kör…'), command=self.open_and_run)
-        self.btn_open_run.pack(fill="x", padx=8, pady=(0, 8))
-        main.add(left, minsize=180, width=230)
+        self.btn_run_selected = self._button(left, tr('▶ Kör vald fil'), self.run_selected,
+                                             kind="primary", font=("TkDefaultFont", 10, "bold"))
+        self.btn_run_selected.pack(fill="x", pady=(10, 5))
+        self.btn_open_run = self._button(left, tr('Öppna och kör…'), self.open_and_run)
+        self.btn_open_run.pack(fill="x")
+        main.add(left, minsize=210, width=250)
 
         # Höger: editor + utdata
-        right = tk.PanedWindow(main, orient="vertical", sashwidth=5)
+        right = tk.PanedWindow(main, orient="vertical", sashwidth=7, bg=c["border"],
+                               borderwidth=0, relief="flat")
         main.add(right, minsize=400)
 
-        ef = tk.Frame(right)
-        esb = tk.Scrollbar(ef)
+        ef = tk.Frame(right, bg=c["surface"])
+        editorbar = tk.Frame(ef, bg=c["surface"], padx=12, pady=9)
+        editorbar.pack(fill="x")
+        tk.Label(editorbar, text=tr('REDIGERARE'), bg=c["surface"], fg=c["muted"],
+                 font=("TkDefaultFont", 8, "bold")).pack(side="left")
+        self.file_label = tk.Label(editorbar, text=tr('Ingen fil vald'), bg=c["surface"],
+                                   fg=c["text"], font=("TkDefaultFont", 10, "bold"))
+        self.file_label.pack(side="right")
+        editor_body = tk.Frame(ef, bg=c["editor"])
+        editor_body.pack(fill="both", expand=True)
+        esb = tk.Scrollbar(editor_body)
         esb.pack(side="right", fill="y")
-        xsb = tk.Scrollbar(ef, orient="horizontal")
+        xsb = tk.Scrollbar(editor_body, orient="horizontal")
         xsb.pack(side="bottom", fill="x")
-        self.editor = tk.Text(ef, wrap="none", undo=True, font=self.mono,
-                              bg="#111b29", fg="#e4ecf7", insertbackground="#77c7ff",
-                              selectbackground="#285a85", padx=16, pady=14,
+        self.editor = tk.Text(editor_body, wrap="none", undo=True, font=self.mono,
+                              bg=c["editor"], fg=c["text"], insertbackground=c["blue"],
+                              selectbackground=c["selection"], padx=18, pady=16,
                               relief="flat", xscrollcommand=xsb.set,
                               yscrollcommand=esb.set, tabs=("1c",))
         self.editor.pack(side="left", fill="both", expand=True)
@@ -1092,26 +1172,34 @@ class App(tk.Tk):
         self.editor.bind("<<Modified>>", lambda e: self._update_title())
         right.add(ef, minsize=150, height=400)
 
-        of = tk.Frame(right)
-        outputbar = tk.Frame(of)
+        of = tk.Frame(right, bg=c["surface"])
+        outputbar = tk.Frame(of, bg=c["surface"], padx=10, pady=5)
         outputbar.pack(fill="x")
-        tk.Label(outputbar, text=tr('UTDATA'), anchor="w", padx=10).pack(side="left")
-        tk.Button(outputbar, text=tr('Rensa'), command=self.clear_output).pack(side="right")
+        tk.Label(outputbar, text=tr('UTDATA'), anchor="w", bg=c["surface"], fg=c["muted"],
+                 font=("TkDefaultFont", 8, "bold")).pack(side="left")
+        self._button(outputbar, tr('Rensa'), self.clear_output, padx=10, pady=5).pack(side="right")
         tk.Label(outputbar, text=tr('Behöver skriptet inmatning? Använd Kör i terminal.'),
-                 fg="#a5b5cc", font=("TkDefaultFont", 9)).pack(side="left", padx=12)
+                 bg=c["surface"], fg=c["muted"], font=("TkDefaultFont", 9)).pack(side="left", padx=12)
         osb = tk.Scrollbar(of)
         osb.pack(side="right", fill="y")
-        self.output = tk.Text(of, height=10, wrap="char", state="disabled", bg="#1e1e1e", fg="#dcdcdc",
+        self.output = tk.Text(of, height=10, wrap="char", state="disabled",
+                              bg=c["terminal"], fg=c["text"], insertbackground=c["blue"],
+                              selectbackground=c["selection"], relief="flat", padx=14, pady=10,
                               font=self.mono_small, yscrollcommand=osb.set)
         self.output.pack(side="left", fill="both", expand=True)
         osb.config(command=self.output.yview)
-        self.output.tag_config("info", foreground="#6cb6ff")
-        self.output.tag_config("err", foreground="#ff7b72")
+        self.output.tag_config("info", foreground=c["blue"])
+        self.output.tag_config("err", foreground="#ff7b86")
         right.add(of, minsize=80)
 
-        self.status = tk.Label(self, anchor="w", padx=14, pady=8, bg="#101722", fg="#a5b5cc",
+        statusbar = tk.Frame(self, bg=c["header"], padx=14, pady=8,
+                             highlightbackground=c["border"], highlightthickness=1)
+        statusbar.pack(fill="x", side="bottom")
+        tk.Label(statusbar, text="●", bg=c["header"], fg=c["blue"],
+                 font=("TkDefaultFont", 8)).pack(side="left", padx=(0, 8))
+        self.status = tk.Label(statusbar, anchor="w", bg=c["header"], fg=c["muted"],
                                text=tr('Redo · Skapa en fil med Ctrl+N eller öppna med Ctrl+O'))
-        self.status.pack(fill="x", side="bottom")
+        self.status.pack(fill="x", side="left", expand=True)
 
     def _tab_changed(self, _event=None):
         if self.tabs.select() == str(self.terminal):
@@ -1148,24 +1236,40 @@ class App(tk.Tk):
         window.title(tr('Inställningar'))
         window.transient(self)
         window.resizable(False, False)
-        frame = tk.Frame(window, padx=24, pady=20)
+        c = self.colors
+        window.configure(bg=c["bg"])
+        frame = tk.Frame(window, padx=26, pady=22, bg=c["surface"])
         frame.pack(fill="both", expand=True)
+        heading = tk.Frame(frame, bg=c["surface"])
+        heading.pack(fill="x", pady=(0, 20))
+        if hasattr(self, "_header_logo"):
+            tk.Label(heading, image=self._header_logo, bg=c["surface"]).pack(side="left", padx=(0, 12))
+        title = tk.Frame(heading, bg=c["surface"])
+        title.pack(side="left", anchor="w", pady=6)
+        tk.Label(title, text=tr('Inställningar'), bg=c["surface"], fg=c["text"],
+                 font=('TkDefaultFont', 17, 'bold')).pack(anchor="w")
+        tk.Label(title, text="Runcom", bg=c["surface"], fg=c["muted"]).pack(anchor="w")
         if not IS_WIN:
             def enable_sudo():
                 window.destroy()
                 self.activate_sudo(show_error=True)
-            tk.Label(frame, text='Sudo', font=('TkDefaultFont', 12, 'bold')).pack(anchor='w')
+            tk.Label(frame, text='Sudo', bg=c["surface"], fg=c["text"],
+                     font=('TkDefaultFont', 12, 'bold')).pack(anchor='w')
             tk.Label(frame, text=tr('Sudo-lösenordet skrivs direkt i terminalen och sparas aldrig av Runcom. Systemets sudo-behörighet hålls aktiv medan appen är öppen.'),
-                     wraplength=380, justify='left').pack(anchor='w', pady=(8, 4))
-            tk.Label(frame, textvariable=self.terminal.sudo_state, fg='#a5b5cc').pack(anchor='w')
-            tk.Button(frame, text=tr('Aktivera sudo'), command=enable_sudo).pack(anchor='w', pady=(8, 18))
-            ttk.Separator(frame).pack(fill='x', pady=(0, 18))
-        tk.Label(frame, text=tr('Avinstallera Runcom'), font=('TkDefaultFont', 12, 'bold')).pack(anchor='w')
+                     bg=c["surface"], fg=c["muted"], wraplength=420,
+                     justify='left').pack(anchor='w', pady=(8, 4))
+            tk.Label(frame, textvariable=self.terminal.sudo_state, bg=c["surface"],
+                     fg=c["blue"]).pack(anchor='w')
+            self._button(frame, tr('Aktivera sudo'), enable_sudo, kind="accent").pack(anchor='w', pady=(10, 20))
+            tk.Frame(frame, height=1, bg=c["border"]).pack(fill='x', pady=(0, 20))
+        tk.Label(frame, text=tr('Avinstallera Runcom'), bg=c["surface"], fg=c["text"],
+                 font=('TkDefaultFont', 12, 'bold')).pack(anchor='w')
         tk.Label(frame, text=tr('Appen och dess genvägar tas bort. Dina egna skript sparas.'),
-                 wraplength=380, justify='left').pack(anchor='w', pady=12)
-        tk.Button(frame, text=tr('Avinstallera Runcom'), command=self.uninstall_app,
-                  bg='#8b3030', fg='white').pack(anchor='w')
-        tk.Button(frame, text=tr('Stäng'), command=window.destroy).pack(anchor='e', pady=(16, 0))
+                 bg=c["surface"], fg=c["muted"], wraplength=420,
+                 justify='left').pack(anchor='w', pady=12)
+        self._button(frame, tr('Avinstallera Runcom'), self.uninstall_app,
+                     kind="danger").pack(anchor='w')
+        self._button(frame, tr('Stäng'), window.destroy).pack(anchor='e', pady=(18, 0))
 
     def uninstall_app(self):
         if not messagebox.askyesno(tr('Avinstallera Runcom'),
@@ -1257,7 +1361,12 @@ class App(tk.Tk):
 
     def _update_title(self):
         name = self.current.name if self.current else tr('(ingen fil)')
-        self.title(f"{'● ' if self._dirty() else ''}{name} – Runcom")
+        dirty = self._dirty()
+        self.title(f"{'● ' if dirty else ''}{name} – Runcom")
+        if hasattr(self, 'file_label'):
+            label = self.current.name if self.current else tr('Ingen fil vald')
+            self.file_label.config(text=('● ' if dirty else '') + label,
+                                   fg=self.colors['violet'] if dirty else self.colors['text'])
 
     def _set_status(self, text):
         self.status.config(text=text)
@@ -1531,7 +1640,8 @@ class App(tk.Tk):
             self.proc = None
             return
         self.btn_run.config(state="disabled")
-        self.btn_stop.config(state="normal")
+        self.btn_stop.config(state="normal", bg=self.colors["red"],
+                             activebackground=self.colors["red_hover"])
         self._set_status(tr('Kör…'))
         encoding = OEM
         if path.suffix.lower() == ".py" or (
@@ -1582,7 +1692,8 @@ class App(tk.Tk):
                     self._out('{0}{1}]\n'.format(tr('\n[Avslutades med kod '), val), "info" if val == 0 else "err")
                     self.proc = None
                     self.btn_run.config(state="normal")
-                    self.btn_stop.config(state="disabled")
+                    self.btn_stop.config(state="disabled", bg=self.colors["surface_alt"],
+                                         activebackground="#22364d")
                     self._set_status('{0}{1})'.format(tr('Klar (kod '), val))
         except queue.Empty:
             pass

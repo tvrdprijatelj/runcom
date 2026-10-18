@@ -60,6 +60,13 @@ class GuiTests(unittest.TestCase):
         self.app.btn_settings.invoke()
         self.assertTrue(self.app._settings_window.winfo_exists())
 
+    def test_brand_logo_and_editor_identity_are_visible(self):
+        self.assertTrue(hasattr(self.app, '_app_icon'))
+        self.assertTrue(hasattr(self.app, '_header_logo'))
+        self.assertEqual(self.app.logo_label.cget('image'), str(self.app._header_logo))
+        self.assertEqual(self.app.file_label.cget('text'), runcom.tr('Ingen fil vald'))
+        self.assertEqual(self.app.cget('background'), runcom.THEME['bg'])
+
     def test_english_buttons_and_file_dialog(self):
         self.app.on_close()
         with patch.object(runcom, 'LANGUAGE', 'en'), patch.object(runcom, 'DEFAULT_DIR', Path(self.folder.name)):
