@@ -38,7 +38,6 @@ NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
 NEW_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x00000200)
 NEW_CONSOLE = getattr(subprocess, "CREATE_NEW_CONSOLE", 0x00000010)
 
-DEFAULT_DIR = Path.home() / "skript"
 DEFAULT_EXT = ".bat" if IS_WIN else ".sh"
 HELP_URLS = {
     "sv": "https://tvrdprijatelj.github.io/runcom/help.html",
@@ -162,12 +161,12 @@ def github_json(endpoint):
 def current_revision(folder):
     if (folder / ".git").exists():
         if subprocess.check_output(["git", "status", "--porcelain"], cwd=str(folder)):
-            raise ValueError("Spara och checka in lokala kodändringar först. / Commit local changes first.")
+            raise ValueError(tr("Spara och checka in lokala kodändringar först."))
         return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=str(folder), text=True).strip()
     marker = folder / "runcom-revision"
     if marker.exists():
         return marker.read_text(encoding="utf-8").strip()
-    raise ValueError("Versionsinformation saknas. Kör den nya installationsfilen en gång först. / Run the new installer once to record the installed version.")
+    raise ValueError(tr("Versionsinformation saknas. Kör den nya installationsfilen en gång först."))
 
 
 def available_release(folder):
@@ -236,24 +235,48 @@ def install_release(folder, release):
         raise
 
 
-def installed_language():
+def language_preference(path=None):
+    target = Path(path) if path is not None else Path(__file__).resolve().with_name("runcom-language")
     try:
-        value = Path(__file__).with_name("runcom-language").read_text(encoding="utf-8").strip()
+        value = target.read_text(encoding="utf-8").strip()
     except OSError:
-        value = "sv"
-    return value if value in ("sv", "en") else "sv"
+        return None
+    return value if value in ("sv", "en") else None
+
+
+def installed_language():
+    return language_preference() or "sv"
 
 
 LANGUAGE = installed_language()
+
+
+def default_scripts_dir(language, home=None):
+    """Choose a localized new folder without switching away from existing scripts."""
+    home = Path.home() if home is None else Path(home)
+    legacy = home / "skript"
+    english = home / "Runcom Scripts"
+    if legacy.exists():
+        return legacy
+    if english.exists():
+        return english
+    return legacy if language == "sv" else english
+
+
+DEFAULT_DIR = default_scripts_dir(LANGUAGE)
 TRANSLATIONS = {
     'Inställningar': 'Settings',
+    'Språk': 'Language',
+    'Välj språk för hela Runcom. Appen startas om när du tillämpar ändringen.': 'Choose the language for all of Runcom. The app restarts when you apply the change.',
+    'Tillämpa och starta om': 'Apply and restart',
+    'Kunde inte byta språk': 'Could not change language',
     'Avinstallera Runcom': 'Uninstall Runcom',
     'Stäng': 'Close',
     'Appen och dess genvägar tas bort. Dina egna skript sparas.': 'The app and its shortcuts are removed. Your own scripts are kept.',
     'Avinstallera Runcom och stäng appen? Pågående skript och terminaler stoppas. Dina egna skript sparas.': 'Uninstall Runcom and close the app? Running scripts and terminals will be stopped. Your own scripts are kept.',
     'Kunde inte starta avinstallationen': 'Could not start uninstallation',
     'Windows-kommandon: skriv på raden och tryck Enter. Interaktiva konsolprogram körs med F6.': 'Windows commands: type on the input line and press Enter. Use F6 for interactive console programs.',
-    '▶ Kör vald fil': '▶ Run selected file',
+    '▶ Kör vald fil': '▶ Run selected script',
     'Öppna och kör…': 'Open and run…',
     'Välj en fil i listan först.': 'Select a file in the list first.',
     'Skript': 'Scripts',
@@ -262,19 +285,19 @@ TRANSLATIONS = {
     'Terminalen är stängd. Starta om den.': 'The terminal is closed. Restart it.',
     'Starta om terminal': 'Restart terminal',
     'Rensa terminalen': 'Clear terminal',
-    'Håll sudo aktivt i sessionen': 'Keep sudo active for this session',
+    'Håll sudo aktivt i sessionen': 'Keep sudo active while Runcom is open',
     'Sudo: inte aktivt': 'Sudo: inactive',
     'Sudo: väntar på lösenord': 'Sudo: waiting for password',
-    'Sudo: aktivt under appsessionen': 'Sudo: active for the app session',
+    'Sudo: aktivt under appsessionen': 'Sudo: active',
     'Sudo: autentiseringen avbröts eller löpte ut': 'Sudo: authentication was cancelled or expired',
     'Aktivera sudo': 'Enable sudo',
     'Sudo-lösenord': 'Sudo password',
-    'Runcom behöver sudo-behörighet för den här appsessionen.': 'Runcom needs sudo access for this app session.',
+    'Runcom behöver sudo-behörighet för den här appsessionen.': 'Runcom needs sudo access while the app is open.',
     'Lösenordet skickas direkt till systemets sudo och sparas aldrig.': 'The password is sent directly to the system sudo process and is never stored.',
     'Lösenord': 'Password',
     'Fortsätt': 'Continue',
     'Avbryt': 'Cancel',
-    'Runcom visar en grafisk lösenordsdialog och sparar aldrig lösenordet. Systemets sudo-behörighet hålls aktiv medan appen är öppen.': 'Runcom uses a graphical password dialog and never stores the password. The system sudo authorization is kept active while the app is open.',
+    'Runcom visar en grafisk lösenordsdialog och sparar aldrig lösenordet. Systemets sudo-behörighet hålls aktiv medan appen är öppen.': 'Runcom uses a graphical password dialog and never stores the password. Your sudo session stays active while Runcom is open.',
     'Kommandoterminal · Ctrl+C avbryter · Ctrl+Shift+V klistrar in. Helskärmsprogram körs med F6.': 'Command terminal · Ctrl+C interrupts · Ctrl+Shift+V pastes. Use F6 for full-screen programs.',
     'Kunde inte starta terminalen': 'Could not start the terminal',
     'Ny terminalsession': 'New terminal session',
@@ -303,7 +326,7 @@ TRANSLATIONS = {
     'Spara som…': 'Save as…',
     'Ta bort': 'Delete',
     'Byt mapp…': 'Change folder…',
-    '▶ Kör här (F5)': '▶ Run here (F5)',
+    '▶ Kör här (F5)': '▶ Run in app (F5)',
     '■ Stoppa': '■ Stop',
     'Redo · Skapa en fil med Ctrl+N eller öppna med Ctrl+O': 'Ready · Create a file with Ctrl+N or open with Ctrl+O',
     'Öppna hjälpen manuellt i din webbläsare:\n\n': 'Open the help manually in your browser:\n\n',
@@ -336,7 +359,7 @@ TRANSLATIONS = {
     'Startade ': 'Started ',
     ' som administratör': ' as administrator',
     'Runcom kunde inte starta det grafiska gränssnittet: ': 'Runcom could not start the graphical interface: ',
-    'Skriv. Kör. Se resultatet.': 'Write. Run. See the result.',
+    'Skriv. Kör. Se resultatet.': 'Write. Run. See the output.',
     'Kör i terminal (F6)': 'Run in terminal (F6)',
     'Kör med sudo (F8)': 'Run with sudo (F8)',
     'Sök filnamn · dubbelklicka för att öppna': 'Search filenames · double-click to open',
@@ -356,7 +379,7 @@ TRANSLATIONS = {
     'Använd .bat, .cmd, .ps1 eller .py.': 'Use .bat, .cmd, .ps1 or .py.',
     ' i ett konsolfönster': ' in a console window',
     'Ingen terminal hittades': 'No terminal found',
-    'Installera t.ex. gnome-terminal, konsole eller xterm, eller använd ”Kör här”.': 'Install gnome-terminal, konsole or xterm, or use Run here.',
+    'Installera t.ex. gnome-terminal, konsole eller xterm, eller använd ”Kör här”.': 'Install GNOME Terminal, Konsole, or XTerm, or use Run in app.',
     'Kör som admin': 'Run as administrator',
     'Kör med sudo…': 'Run with sudo…',
     'Filen har ändrats': 'File changed',
@@ -366,6 +389,8 @@ TRANSLATIONS = {
     '\n[Avslutades med kod ': '\n[Finished with exit code ',
     'Klar (kod ': 'Done (exit code ',
     ' i ': ' in ',
+    'Spara och checka in lokala kodändringar först.': 'Commit your local code changes before checking for updates.',
+    'Versionsinformation saknas. Kör den nya installationsfilen en gång först.': 'Version information is missing. Run the new installer once before checking for updates.',
 }
 
 
@@ -477,6 +502,86 @@ def atomic_write(path, text, encoding, executable=False, exclusive=False):
         except FileNotFoundError:
             pass
     return data
+
+
+def save_language(language, path=None):
+    """Persist the interface language beside the application."""
+    if language not in ('sv', 'en'):
+        raise ValueError('Unsupported language: ' + str(language))
+    target = Path(path) if path is not None else Path(__file__).resolve().with_name('runcom-language')
+    atomic_write(target, language + '\n', 'utf-8')
+
+
+def first_run_complete(path=None):
+    target = Path(path) if path is not None else Path(__file__).resolve().with_name('runcom-first-run')
+    try:
+        return target.read_text(encoding='utf-8').strip() == '1'
+    except OSError:
+        return False
+
+
+def mark_first_run_complete(path=None):
+    target = Path(path) if path is not None else Path(__file__).resolve().with_name('runcom-first-run')
+    atomic_write(target, '1\n', 'utf-8')
+
+
+def activate_runtime_language(language):
+    """Apply a first-run choice before constructing the main window."""
+    global LANGUAGE, DEFAULT_DIR, TPL_UNIX, TPL_BAT, TPL_PS1
+    LANGUAGE = language
+    DEFAULT_DIR = default_scripts_dir(language)
+    TPL_UNIX = SHEBANG + tr('set -euo pipefail\n\n# Skriv dina kommandon här\necho "Hej från $(hostname)!"\n')
+    TPL_BAT = tr('@echo off\nrem Skriv dina kommandon här\necho Hej fran %COMPUTERNAME%!\n')
+    TPL_PS1 = tr('# Skriv dina kommandon här\nWrite-Host "Hej från $env:COMPUTERNAME!"\n')
+
+
+def choose_initial_language():
+    """Show a bilingual first-run dialog and return the persisted choice."""
+    root = tk.Tk()
+    root.title('Runcom — Välj språk / Choose language')
+    root.configure(bg=THEME['bg'])
+    root.resizable(False, False)
+    selected = []
+    frame = tk.Frame(root, bg=THEME['surface'], padx=32, pady=28)
+    frame.pack(fill='both', expand=True)
+    try:
+        logo = tk.PhotoImage(file=str(Path(__file__).resolve().with_name('runcom.png')))
+        root._language_logo = logo.subsample(3, 3)
+        tk.Label(frame, image=root._language_logo, bg=THEME['surface']).pack(pady=(0, 14))
+    except (tk.TclError, OSError):
+        tk.Label(frame, text='>_R', bg=THEME['surface_alt'], fg=THEME['blue'],
+                 font=('TkFixedFont', 22, 'bold'), padx=12, pady=8).pack(pady=(0, 14))
+    tk.Label(frame, text='Välj språk', bg=THEME['surface'], fg=THEME['text'],
+             font=('TkDefaultFont', 18, 'bold')).pack()
+    tk.Label(frame, text='Choose your language', bg=THEME['surface'], fg=THEME['muted'],
+             font=('TkDefaultFont', 12)).pack(pady=(4, 20))
+    buttons = tk.Frame(frame, bg=THEME['surface'])
+    buttons.pack(fill='x')
+
+    def choose(language):
+        try:
+            save_language(language)
+            mark_first_run_complete()
+        except (OSError, ValueError) as error:
+            messagebox.showerror('Kunde inte spara / Could not save', str(error), parent=root)
+            return
+        selected.append(language)
+        root.destroy()
+
+    for language, label in (('sv', 'Svenska'), ('en', 'English')):
+        tk.Button(buttons, text=label, command=lambda value=language: choose(value),
+                  bg=THEME['blue'] if language == 'en' else THEME['surface_alt'], fg='white',
+                  activebackground=THEME['blue_hover'], activeforeground='white',
+                  relief='flat', borderwidth=0, padx=22, pady=11,
+                  font=('TkDefaultFont', 11, 'bold'), cursor='hand2').pack(
+                      side='left', expand=True, fill='x', padx=5)
+    root.protocol('WM_DELETE_WINDOW', root.destroy)
+    root.update_idletasks()
+    x = max(0, (root.winfo_screenwidth() - root.winfo_width()) // 2)
+    y = max(0, (root.winfo_screenheight() - root.winfo_height()) // 3)
+    root.geometry('+{}+{}'.format(x, y))
+    root.mainloop()
+    return selected[0] if selected else None
 
 
 def python_executable():
@@ -1349,10 +1454,10 @@ class App(tk.Tk):
         window.resizable(False, False)
         c = self.colors
         window.configure(bg=c["bg"])
-        frame = tk.Frame(window, padx=26, pady=22, bg=c["surface"])
+        frame = tk.Frame(window, padx=26, pady=18, bg=c["surface"])
         frame.pack(fill="both", expand=True)
         heading = tk.Frame(frame, bg=c["surface"])
-        heading.pack(fill="x", pady=(0, 20))
+        heading.pack(fill="x", pady=(0, 12))
         if hasattr(self, "_header_logo"):
             tk.Label(heading, image=self._header_logo, bg=c["surface"]).pack(side="left", padx=(0, 12))
         title = tk.Frame(heading, bg=c["surface"])
@@ -1360,6 +1465,23 @@ class App(tk.Tk):
         tk.Label(title, text=tr('Inställningar'), bg=c["surface"], fg=c["text"],
                  font=('TkDefaultFont', 17, 'bold')).pack(anchor="w")
         tk.Label(title, text="Runcom", bg=c["surface"], fg=c["muted"]).pack(anchor="w")
+        tk.Label(frame, text=tr('Språk'), bg=c["surface"], fg=c["text"],
+                 font=('TkDefaultFont', 12, 'bold')).pack(anchor='w')
+        tk.Label(frame, text=tr('Välj språk för hela Runcom. Appen startas om när du tillämpar ändringen.'),
+                 bg=c["surface"], fg=c["muted"], wraplength=420,
+                 justify='left').pack(anchor='w', pady=(8, 6))
+        language_row = tk.Frame(frame, bg=c["surface"])
+        language_row.pack(fill='x', anchor='w')
+        self.language_choice = tk.StringVar(value=LANGUAGE)
+        for value, label in (('sv', 'Svenska'), ('en', 'English')):
+            tk.Radiobutton(language_row, text=label, value=value, variable=self.language_choice,
+                           bg=c["surface"], fg=c["text"], activebackground=c["surface"],
+                           activeforeground=c["text"], selectcolor=c["editor"]).pack(
+                               side='left', padx=(0, 14))
+        self.btn_apply_language = self._button(
+            frame, tr('Tillämpa och starta om'), self.apply_language_choice, kind="accent")
+        self.btn_apply_language.pack(anchor='w', pady=(8, 12))
+        tk.Frame(frame, height=1, bg=c["border"]).pack(fill='x', pady=(0, 12))
         if not IS_WIN:
             def enable_sudo():
                 window.destroy()
@@ -1371,16 +1493,39 @@ class App(tk.Tk):
                      justify='left').pack(anchor='w', pady=(8, 4))
             tk.Label(frame, textvariable=self.terminal.sudo_state, bg=c["surface"],
                      fg=c["blue"]).pack(anchor='w')
-            self._button(frame, tr('Aktivera sudo'), enable_sudo, kind="accent").pack(anchor='w', pady=(10, 20))
-            tk.Frame(frame, height=1, bg=c["border"]).pack(fill='x', pady=(0, 20))
+            self._button(frame, tr('Aktivera sudo'), enable_sudo, kind="accent").pack(anchor='w', pady=(8, 12))
+            tk.Frame(frame, height=1, bg=c["border"]).pack(fill='x', pady=(0, 12))
         tk.Label(frame, text=tr('Avinstallera Runcom'), bg=c["surface"], fg=c["text"],
                  font=('TkDefaultFont', 12, 'bold')).pack(anchor='w')
         tk.Label(frame, text=tr('Appen och dess genvägar tas bort. Dina egna skript sparas.'),
                  bg=c["surface"], fg=c["muted"], wraplength=420,
-                 justify='left').pack(anchor='w', pady=12)
+                 justify='left').pack(anchor='w', pady=8)
         self._button(frame, tr('Avinstallera Runcom'), self.uninstall_app,
                      kind="danger").pack(anchor='w')
-        self._button(frame, tr('Stäng'), window.destroy).pack(anchor='e', pady=(18, 0))
+        self._button(frame, tr('Stäng'), window.destroy).pack(anchor='e', pady=(12, 0))
+
+    def apply_language_choice(self):
+        language = self.language_choice.get()
+        if language == LANGUAGE:
+            self._settings_window.destroy()
+            return
+        if not self._confirm_discard():
+            return
+        saved = False
+        try:
+            save_language(language)
+            saved = True
+            source = Path(__file__).resolve()
+            subprocess.Popen([sys.executable, str(source)], cwd=str(source.parent))
+        except (OSError, ValueError) as error:
+            if saved:
+                try:
+                    save_language(LANGUAGE)
+                except OSError:
+                    pass
+            messagebox.showerror(tr('Kunde inte byta språk'), str(error), parent=self._settings_window)
+            return
+        self.on_close(confirm=False)
 
     def uninstall_app(self):
         if not messagebox.askyesno(tr('Avinstallera Runcom'),
@@ -1972,6 +2117,11 @@ if __name__ == "__main__":
         except Exception:
             pass
     try:
+        if not first_run_complete() or language_preference() is None:
+            first_language = choose_initial_language()
+            if first_language is None:
+                sys.exit(0)
+            activate_runtime_language(first_language)
         app = App()
         app.after_idle(app.startup_sudo)
         app.mainloop()

@@ -33,10 +33,12 @@ class UpdateTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
             (folder / 'runcom-language').write_text('en')
+            (folder / 'runcom-first-run').write_text('1\n')
             with patch.object(runcom.urllib.request, 'urlopen', return_value=response):
                 runcom.install_release(folder, {'revision': 'abc'})
             self.assertEqual((folder / 'runcom.py').read_text(), '# updated')
             self.assertEqual((folder / 'runcom-revision').read_text(), 'abc')
             self.assertEqual((folder / 'runcom-language').read_text(), 'en')
+            self.assertEqual((folder / 'runcom-first-run').read_text(), '1\n')
             self.assertEqual((folder / 'uninstall.sh').read_text(), '# updated')
             self.assertEqual((folder / 'uninstall.ps1').read_text(), '# updated')

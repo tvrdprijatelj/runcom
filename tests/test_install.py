@@ -53,6 +53,7 @@ else:
             result = self.run_installer(*args)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual((self.install / 'runcom-language').read_text(), expected)
+            self.assertFalse((self.install / 'runcom-first-run').exists())
 
     def test_install_survives_temp_cleanup_and_can_update(self):
         for output in ('installed', 'updated'):

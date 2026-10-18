@@ -60,6 +60,53 @@ class GuiTests(unittest.TestCase):
         self.app.btn_settings.invoke()
         self.assertTrue(self.app._settings_window.winfo_exists())
 
+    def test_language_can_be_changed_and_restarts_app(self):
+        self.app.open_settings()
+        self.assertEqual(self.app.language_choice.get(), runcom.LANGUAGE)
+        language_file = Path(self.folder.name) / 'runcom-language'
+        source = Path(self.folder.name) / 'runcom.py'
+        with patch.object(runcom, '__file__', str(source)), \
+                patch.object(self.app, '_confirm_discard', return_value=True), \
+                patch.object(self.app, 'on_close') as close, \
+                patch.object(runcom.subprocess, 'Popen') as launch:
+            self.app.language_choice.set('en' if runcom.LANGUAGE == 'sv' else 'sv')
+            self.app.btn_apply_language.invoke()
+        self.assertEqual(language_file.read_text(encoding='utf-8').strip(),
+                         'en' if runcom.LANGUAGE == 'sv' else 'sv')
+        launch.assert_called_once_with([sys.executable, str(source)], cwd=str(source.parent))
+        close.assert_called_once_with(confirm=False)
+
+    def test_language_change_rolls_back_if_restart_fails(self):
+        self.app.open_settings()
+        language_file = Path(self.folder.name) / 'runcom-language'
+        source = Path(self.folder.name) / 'runcom.py'
+        with patch.object(runcom, '__file__', str(source)), \
+                patch.object(self.app, '_confirm_discard', return_value=True), \
+                patch.object(runcom.subprocess, 'Popen', side_effect=OSError('restart failed')), \
+                patch.object(runcom.messagebox, 'showerror') as error:
+            self.app.language_choice.set('en' if runcom.LANGUAGE == 'sv' else 'sv')
+            self.app.btn_apply_language.invoke()
+        self.assertEqual(language_file.read_text(encoding='utf-8').strip(), runcom.LANGUAGE)
+        self.assertIn('restart failed', error.call_args[0][1])
+
+    def test_first_run_language_dialog_saves_english_choice(self):
+        source = Path(self.folder.name) / 'runcom.py'
+
+        def choose_english(window):
+            def descendants(widget):
+                for child in widget.winfo_children():
+                    yield child
+                    yield from descendants(child)
+            button = next(child for child in descendants(window)
+                          if isinstance(child, tk.Button) and child.cget('text') == 'English')
+            button.invoke()
+
+        with patch.object(runcom, '__file__', str(source)), \
+                patch.object(tk.Tk, 'mainloop', choose_english):
+            self.assertEqual(runcom.choose_initial_language(), 'en')
+        self.assertEqual(source.with_name('runcom-language').read_text(encoding='utf-8'), 'en\n')
+        self.assertEqual(source.with_name('runcom-first-run').read_text(encoding='utf-8'), '1\n')
+
     def test_brand_logo_and_editor_identity_are_visible(self):
         self.assertTrue(hasattr(self.app, '_app_icon'))
         self.assertTrue(hasattr(self.app, '_header_logo'))
@@ -72,14 +119,42 @@ class GuiTests(unittest.TestCase):
         with patch.object(runcom, 'LANGUAGE', 'en'), patch.object(runcom, 'DEFAULT_DIR', Path(self.folder.name)):
             self.app = runcom.App()
             self.app.update()
-            self.assertEqual(self.app.btn_run['text'], '▶ Run here (F5)')
+            self.assertEqual(self.app.btn_run['text'], '▶ Run in app (F5)')
             self.assertEqual(self.app.btn_stop['text'], '■ Stop')
             self.assertEqual(self.app.tabs.tab(self.app.terminal, 'text'), 'Terminal')
-            self.assertEqual(runcom.tr('Håll sudo aktivt i sessionen'), 'Keep sudo active for this session')
+            self.assertEqual(runcom.tr('Håll sudo aktivt i sessionen'), 'Keep sudo active while Runcom is open')
             self.assertEqual(runcom.tr('Kör med sudo (F8)'), 'Run with sudo (F8)')
             with patch.object(runcom.simpledialog, 'askstring', return_value=None) as dialog:
                 self.app.new_file()
             self.assertEqual(dialog.call_args[0][0], 'New script file')
+
+    def test_english_main_settings_and_sudo_dialog_have_no_swedish_ui_text(self):
+        self.app.on_close()
+        with patch.object(runcom, 'LANGUAGE', 'en'), patch.object(runcom, 'DEFAULT_DIR', Path(self.folder.name)):
+            self.app = runcom.App()
+            self.app.open_settings()
+            self.app.prompt_sudo_password()
+            self.app.update()
+            texts = [self.app.tabs.tab(tab, 'text') for tab in self.app.tabs.tabs()]
+
+            def collect(widget):
+                try:
+                    value = widget.cget('text')
+                except tk.TclError:
+                    value = ''
+                if value and not str(value).startswith('PY_VAR'):
+                    texts.append(str(value))
+                for child in widget.winfo_children():
+                    collect(child)
+
+            collect(self.app)
+            visible = '\n'.join(texts)
+            for swedish in ('Hjälp', 'Inställningar', 'Skript', 'Kör', 'Lösenord',
+                            'Rensa', 'Spara', 'Stäng', 'Ta bort', 'Välj'):
+                self.assertNotIn(swedish, visible)
+            self.app._sudo_password_window.destroy()
+            self.app._sudo_password_window = None
+            self.app._settings_window.destroy()
 
     @unittest.skipIf(os.name == 'nt', 'Unix PTY integration')
     def test_terminal_tab_runs_commands_and_restart_closes_old_shell(self):

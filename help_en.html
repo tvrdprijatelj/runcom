@@ -30,7 +30,7 @@
     <article id="guide">
       <section id="overview" class="guide-section">
         <h2>1. What is Runcom?</h2>
-        <p>Runcom is a script editor for Linux, macOS, and Windows. It combines a file list, code editor, output panel, and interactive terminal. The app opens on the <strong>Scripts</strong> tab. Its logo and color theme are used throughout the interface; the terminal has a black background and green text.</p>
+        <p>Runcom is a script editor for Linux, macOS, and Windows. The first time it opens, a graphical dialog asks you to choose Swedish or English. The choice is saved and can later be changed in Settings. Runcom combines a file list, code editor, output panel, and interactive terminal. The app opens on the <strong>Scripts</strong> tab. Its logo and color theme are used throughout the interface; the terminal has a black background and green text.</p>
         <table><thead><tr><th>System</th><th>Supported scripts</th></tr></thead><tbody><tr><td>Linux and macOS</td><td>Python, Bash, and other text scripts with a valid shebang.</td></tr><tr><td>Windows</td><td>Batch (.bat/.cmd), PowerShell (.ps1), and Python (.py).</td></tr></tbody></table>
         <p>Runcom requires Python 3.8 or later with Tkinter. Start on the <a href="download_en.html#install">download page</a> for operating-system-specific installation commands.</p>
       </section>
@@ -39,9 +39,9 @@
         <table><thead><tr><th>Area</th><th>Purpose</th></tr></thead><tbody>
           <tr><td>Scripts</td><td>Lists files in the selected folder. The search field filters names; double-click or press Enter to open a file.</td></tr>
           <tr><td>Editor</td><td>Write and edit your script here. A dot before the filename indicates unsaved changes.</td></tr>
-          <tr><td>Output</td><td>Shows output and the exit code from <strong>Run here</strong>. This panel does not accept keyboard input.</td></tr>
+          <tr><td>Output</td><td>Shows output and the exit code from <strong>Run in app</strong>. This panel does not accept keyboard input.</td></tr>
           <tr><td>Terminal</td><td>A persistent interactive terminal with a black background and green text. Use it for normal commands and sudo.</td></tr>
-          <tr><td>Settings</td><td>Shows sudo status and provides sudo activation and uninstallation controls.</td></tr>
+          <tr><td>Settings</td><td>Changes the language for the entire app, shows sudo status, and provides sudo activation and uninstallation controls. Applying a language change saves it and restarts Runcom.</td></tr>
         </tbody></table>
         <p>Drag the dividers to resize the file list, editor, and output panel.</p>
       </section>
@@ -57,7 +57,7 @@ print(f"Hello, {name}!")</code></pre>
       <section id="running" class="guide-section">
         <h2>4. Choose the right run mode</h2>
         <table><thead><tr><th>Mode</th><th>Use it for</th></tr></thead><tbody>
-          <tr><td>Run here (F5)</td><td>Non-interactive scripts. Output appears in the app and the <strong>Stop</strong> button can terminate the process.</td></tr>
+          <tr><td>Run in app (F5)</td><td>Non-interactive scripts. Output appears in the app and the <strong>Stop</strong> button can terminate the process.</td></tr>
           <tr><td>Run in terminal (F6)</td><td>Scripts that request input or use interactive or full-screen terminal programs.</td></tr>
           <tr><td>Run with sudo (F8)</td><td>Linux/macOS: runs the entire script with sudo in the built-in terminal.</td></tr>
           <tr><td>Run as administrator</td><td>Windows: opens the system UAC prompt and runs the script with administrator privileges.</td></tr>
@@ -79,12 +79,12 @@ print(f"Hello, {name}!")</code></pre>
       </section>
       <section id="shortcuts" class="guide-section">
         <h2>7. Keyboard shortcuts</h2>
-        <table><thead><tr><th>Action</th><th>Shortcut</th></tr></thead><tbody><tr><td>New / Open / Save / Save as</td><td>Ctrl+N / Ctrl+O / Ctrl+S / Ctrl+Shift+S</td></tr><tr><td>Run here</td><td>F5</td></tr><tr><td>Run in a separate terminal</td><td>F6</td></tr><tr><td>Built-in terminal</td><td>F7</td></tr><tr><td>Run with sudo</td><td>F8</td></tr><tr><td>Help</td><td>F1</td></tr></tbody></table>
+        <table><thead><tr><th>Action</th><th>Shortcut</th></tr></thead><tbody><tr><td>New / Open / Save / Save as</td><td>Ctrl+N / Ctrl+O / Ctrl+S / Ctrl+Shift+S</td></tr><tr><td>Run in app</td><td>F5</td></tr><tr><td>Run in a separate terminal</td><td>F6</td></tr><tr><td>Built-in terminal</td><td>F7</td></tr><tr><td>Run with sudo</td><td>F8</td></tr><tr><td>Help</td><td>F1</td></tr></tbody></table>
         <p>On macOS, Command also works for file actions. Some keyboards require <kbd>Fn</kbd> with function keys.</p>
       </section>
       <section id="troubleshooting" class="guide-section">
         <h2>8. Troubleshooting</h2>
-        <details><summary>Why does nothing happen when my script requests input?</summary><p><strong>Run here</strong> has no standard input. Use F6 or the built-in terminal for programs that call Python <code>input()</code>, Bash <code>read</code>, or similar functions.</p></details>
+        <details><summary>Why does nothing happen when my script requests input?</summary><p><strong>Run in app</strong> has no standard input. Use F6 or the built-in terminal for programs that call Python <code>input()</code>, Bash <code>read</code>, or similar functions.</p></details>
         <details><summary>Why is sudo not working?</summary><p>Check that <code>sudo</code> is installed and that your account is allowed to use it. Open Settings and select <strong>Enable sudo</strong>. You can retry after cancelling or entering an incorrect password.</p></details>
         <details><summary>Why does the app fail to start?</summary><p>Verify that Python 3.8+ and Tkinter are installed. Ubuntu/Debian commonly use <code>python3-tk</code>, Arch uses <code>tk</code>, and Fedora uses <code>python3-tkinter</code>.</p></details>
         <details><summary>Why can my script not find a file or program?</summary><p>The script's working directory is the folder containing the script. Check relative paths and verify that external programs are available on PATH in Runcom's environment.</p></details>
