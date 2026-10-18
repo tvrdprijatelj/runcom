@@ -819,7 +819,9 @@ class TerminalPanel(tk.Frame):
             success += "; " + after
         inactive = "printf '\\035RUNCOM_SUDO_INACTIVE\\035'"
         if graphical:
-            prompt = shlex.quote('\x1dRUNCOM_SUDO_PASSWORD\x1d')
+            # Generate the control marker in the shell. Sending the raw control
+            # character in an interactive PTY command would let readline consume it.
+            prompt = "\"$(printf '\\035RUNCOM_SUDO_PASSWORD\\035')\""
             validation = (("sudo -k; " if fresh else "")
                           + "if sudo -n -v 2>/dev/null; then " + success
                           + "; elif sudo -p " + prompt + " -v; then " + success
