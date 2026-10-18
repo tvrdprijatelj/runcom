@@ -85,6 +85,9 @@ class GuiTests(unittest.TestCase):
     def test_terminal_tab_runs_commands_and_restart_closes_old_shell(self):
         self.app.open_terminal()
         panel = self.app.terminal
+        self.assertEqual(panel.display.cget('background'), '#000000')
+        self.assertEqual(panel.display.cget('foreground'), runcom.THEME['terminal_text'])
+        self.assertEqual(panel.display.cget('insertbackground'), runcom.THEME['terminal_text'])
         old = panel.session
         panel.command("printf '\\nterminal-widget-ok\\n'" )
         self.pump_until(lambda: '\nterminal-widget-ok\n' in panel.display.get('1.0', 'end'))
@@ -134,7 +137,7 @@ class GuiTests(unittest.TestCase):
             self.app.startup_sudo()
             self.pump_until(lambda: log.exists() and '-k\n-n -v\n' in log.read_text())
             self.pump_until(lambda: self.app.terminal.sudo_state.get() == 'Sudo: aktivt under appsessionen')
-        self.assertEqual(self.app.tabs.select(), str(self.app.terminal))
+        self.assertEqual(self.app.tabs.select(), self.app.tabs.tabs()[0])
         self.assertTrue(self.app.terminal.keep_sudo.get())
 
     def test_graphical_sudo_password_is_hidden_and_sent_to_pty(self):

@@ -50,7 +50,9 @@ THEME = {
     "surface": "#121d2a",
     "surface_alt": "#172536",
     "editor": "#0c1623",
-    "terminal": "#09121d",
+    "terminal": "#000000",
+    "terminal_text": "#39ff88",
+    "output": "#09121d",
     "border": "#26384d",
     "text": "#edf5ff",
     "muted": "#91a5bd",
@@ -670,7 +672,8 @@ class TerminalPanel(tk.Frame):
         scroll = tk.Scrollbar(body)
         scroll.pack(side='right', fill='y')
         self.display = tk.Text(body, state='disabled', wrap='char', font=app.mono,
-                               bg=c["terminal"], fg=c["text"], insertbackground=c["blue"],
+                               bg=c["terminal"], fg=c["terminal_text"],
+                               insertbackground=c["terminal_text"],
                                selectbackground=c["selection"], relief="flat", padx=16, pady=14,
                                yscrollcommand=scroll.set, takefocus=True)
         self.display.pack(fill='both', expand=True)
@@ -678,7 +681,8 @@ class TerminalPanel(tk.Frame):
         self.display.mark_set('terminal_cursor', '1.0')
         self.display.mark_gravity('terminal_cursor', 'right')
         if IS_WIN:
-            self.line = tk.Entry(self, bg=c["editor"], fg=c["text"], insertbackground=c["blue"],
+            self.line = tk.Entry(self, bg=c["terminal"], fg=c["terminal_text"],
+                                 insertbackground=c["terminal_text"],
                                  relief="flat", highlightthickness=1,
                                  highlightbackground=c["border"], highlightcolor=c["blue"])
             self.line.pack(fill='x', ipady=7, pady=(8, 0))
@@ -1203,7 +1207,7 @@ class App(tk.Tk):
         osb = tk.Scrollbar(of)
         osb.pack(side="right", fill="y")
         self.output = tk.Text(of, height=10, wrap="char", state="disabled",
-                              bg=c["terminal"], fg=c["text"], insertbackground=c["blue"],
+                              bg=c["output"], fg=c["text"], insertbackground=c["blue"],
                               selectbackground=c["selection"], relief="flat", padx=14, pady=10,
                               font=self.mono_small, yscrollcommand=osb.set)
         self.output.pack(side="left", fill="both", expand=True)
@@ -1229,6 +1233,9 @@ class App(tk.Tk):
     def startup_sudo(self):
         """Request fresh sudo authentication in a graphical password dialog."""
         self.activate_sudo(fresh=True, graphical=True)
+        # Sudo authentication runs through the embedded terminal in the
+        # background, but the editor should remain the app's start view.
+        self.tabs.select(0)
 
     def activate_sudo(self, show_error=False, fresh=False, graphical=False):
         """Request sudo in the app PTY; sudo itself owns the password prompt."""
