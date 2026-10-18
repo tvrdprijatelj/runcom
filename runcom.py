@@ -1475,7 +1475,7 @@ class App(tk.Tk):
             return
         path = self.current
         if self._script_uses_sudo():
-            self._run_in_builtin_terminal(elevated=False, prepared=True)
+            self._run_in_builtin_terminal(elevated=True, prepared=True)
             return
         try:
             cmd = self._command_for(path)

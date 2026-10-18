@@ -152,7 +152,7 @@ class GuiTests(unittest.TestCase):
             self.assertTrue(self.app.bind('<F8>'))
 
     @unittest.skipIf(os.name == 'nt', 'Unix sudo routing')
-    def test_script_with_sudo_elevates_only_explicit_command(self):
+    def test_script_with_sudo_runs_entire_script_elevated(self):
         script = Path(self.folder.name) / 'mixed-privileges.sh'
         script.write_text("printf '\\nouter:%s\\n' \"${RUNCOM_FAKE_SUDO:-user}\"\n"
                           "sudo sh -c 'printf \"inner:%s\\n\" \"${RUNCOM_FAKE_SUDO:-user}\"'\n")
@@ -170,7 +170,7 @@ class GuiTests(unittest.TestCase):
             panel = self.app.terminal
             self.pump_until(lambda: 'inner:root' in panel.display.get('1.0', 'end'))
         output = panel.display.get('1.0', 'end')
-        self.assertIn('outer:user', output)
+        self.assertIn('outer:root', output)
         self.assertIn('inner:root', output)
 
     def test_help_button_and_shortcut(self):
