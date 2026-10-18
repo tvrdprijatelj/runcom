@@ -132,10 +132,23 @@ class GuiTests(unittest.TestCase):
         fake.chmod(0o700)
         with patch.dict(os.environ, {'PATH': str(fake_bin) + os.pathsep + os.environ.get('PATH', '')}):
             self.app.startup_sudo()
-            self.pump_until(lambda: log.exists() and '-k\n-v\n' in log.read_text())
+            self.pump_until(lambda: log.exists() and '-k\n-n -v\n' in log.read_text())
             self.pump_until(lambda: self.app.terminal.sudo_state.get() == 'Sudo: aktivt under appsessionen')
         self.assertEqual(self.app.tabs.select(), str(self.app.terminal))
         self.assertTrue(self.app.terminal.keep_sudo.get())
+
+    def test_graphical_sudo_password_is_hidden_and_sent_to_pty(self):
+        with patch.object(self.app.terminal, 'send') as send:
+            self.app.prompt_sudo_password()
+            window = self.app._sudo_password_window
+            entry = self.app._sudo_password_entry
+            self.assertEqual(entry.cget('show'), '•')
+            entry.insert(0, 'graphical-test-password')
+            entry.event_generate('<Return>')
+            self.app.update()
+        send.assert_called_once_with('graphical-test-password\n')
+        self.assertIsNone(self.app._sudo_password_window)
+        self.assertFalse(window.winfo_exists())
 
     @unittest.skipIf(os.name == 'nt', 'Unix sudo session')
     def test_sudo_script_uses_existing_terminal(self):

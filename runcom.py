@@ -820,7 +820,8 @@ class TerminalPanel(tk.Frame):
         inactive = "printf '\\035RUNCOM_SUDO_INACTIVE\\035'"
         if graphical:
             prompt = shlex.quote('\x1dRUNCOM_SUDO_PASSWORD\x1d')
-            validation = ("sudo -k; if sudo -n -v 2>/dev/null; then " + success
+            validation = (("sudo -k; " if fresh else "")
+                          + "if sudo -n -v 2>/dev/null; then " + success
                           + "; elif sudo -p " + prompt + " -v; then " + success
                           + "; else " + inactive + "; fi")
             command = stop_keeper + "; " + validation

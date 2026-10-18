@@ -146,6 +146,7 @@ class ApplicationTests(unittest.TestCase):
         panel.render = Mock()
         panel.keep_sudo = Mock()
         panel.sudo_state = Mock()
+        panel.app = Mock()
         panel._terminal_output('before\x1dRUNCOM_SUDO_ACT')
         panel._terminal_output('IVE\x1dafter')
         self.assertEqual(''.join(call.args[0] for call in panel.render.call_args_list), 'beforeafter')
@@ -156,6 +157,9 @@ class ApplicationTests(unittest.TestCase):
         panel.keep_sudo.set.assert_called_with(False)
         panel.sudo_state.set.assert_called_with(
             runcom.tr('Sudo: autentiseringen avbröts eller löpte ut'))
+
+        panel._terminal_output('\x1dRUNCOM_SUDO_PASSWORD\x1d')
+        panel.app.after_idle.assert_called_once_with(panel.app.prompt_sudo_password)
 
     @unittest.skipIf(os.name == 'nt', 'Unix sudo routing')
     def test_sudo_script_runs_elevated_after_sudo_authentication(self):
