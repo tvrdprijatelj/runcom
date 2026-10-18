@@ -187,6 +187,20 @@ def available_release(folder):
     return release
 
 
+def automatic_updates_enabled(folder):
+    """Only update real installations automatically, never a source checkout."""
+    folder = Path(folder)
+    return not (folder / ".git").exists() and (folder / "runcom-revision").is_file()
+
+
+def install_available_release(folder):
+    """Install the latest newer release, returning it when an update was applied."""
+    release = available_release(folder)
+    if release:
+        install_release(folder, release)
+    return release
+
+
 def install_release(folder, release):
     # Fetch all files before touching the installation; keep backups for rollback.
     revision = urllib.parse.quote(release["revision"], safe="")
@@ -396,6 +410,7 @@ TRANSLATIONS = {
     ' i ': ' in ',
     'Spara och checka in lokala kodändringar först.': 'Commit your local code changes before checking for updates.',
     'Versionsinformation saknas. Kör den nya installationsfilen en gång först.': 'Version information is missing. Run the new installer once before checking for updates.',
+    'Runcom uppdaterades automatiskt. Den nya versionen används nästa gång appen startas.': 'Runcom updated automatically. The new version will be used the next time the app starts.',
 }
 
 
@@ -1116,6 +1131,9 @@ class App(tk.Tk):
         self._snapshot = None
         self.files = []
         self._sudo_password_attempted = False
+        self._update_running = False
+        self._update_automatic = False
+        self._automatic_update_after = None
 
         self._build_ui()
         self._bind_keys()
@@ -1125,6 +1143,8 @@ class App(tk.Tk):
         if IS_MAC:
             self.createcommand("tk::mac::Quit", self.on_close)
         self._queue_after = self.after(50, self._drain_queue)
+        if automatic_updates_enabled(icon_dir):
+            self._automatic_update_after = self.after(1500, self._start_automatic_update)
 
     # ------------------------------------------------------------------ UI
     def _button(self, parent, text, command, kind="secondary", **options):
@@ -1577,13 +1597,29 @@ class App(tk.Tk):
             return
         self.on_close(confirm=False)
 
-    def check_update(self):
+    def _start_automatic_update(self):
+        self._automatic_update_after = None
+        self.check_update(automatic=True)
+
+    def check_update(self, automatic=False):
+        if self._update_running:
+            return
+        if not automatic and self._automatic_update_after is not None:
+            self.after_cancel(self._automatic_update_after)
+            self._automatic_update_after = None
+        self._update_running = True
+        self._update_automatic = automatic
         self.btn_update.config(state="disabled")
         self._update_result = queue.Queue()
         def worker():
             try:
-                result = available_release(Path(__file__).resolve().parent)
-                self._update_result.put(("checked", result))
+                folder = Path(__file__).resolve().parent
+                if automatic:
+                    result = install_available_release(folder)
+                    self._update_result.put(("installed" if result else "current", result))
+                else:
+                    result = available_release(folder)
+                    self._update_result.put(("checked", result))
             except Exception as error:
                 self._update_result.put(("error", str(error)))
         threading.Thread(target=worker, daemon=True).start()
@@ -1595,6 +1631,7 @@ class App(tk.Tk):
         except queue.Empty:
             self.after(100, self._poll_update)
             return
+        automatic = self._update_automatic
         title = "Uppdatering" if LANGUAGE == "sv" else "Update"
         if kind == "checked" and value:
             prompt = (("Installera release {}? Starta om appen efter uppdateringen.")
@@ -1609,13 +1646,19 @@ class App(tk.Tk):
                 threading.Thread(target=worker, daemon=True).start()
                 self.after(100, self._poll_update)
                 return
-        elif kind == "error":
+        elif kind == "error" and not automatic:
             messagebox.showerror(title, value, parent=self)
+        elif kind == "installed" and automatic:
+            self._set_status(tr('Runcom uppdaterades automatiskt. Den nya versionen används nästa gång appen startas.'))
+        elif kind == "current" and automatic:
+            pass
         else:
             text = (("Uppdateringen är klar. Starta om Runcom." if LANGUAGE == "sv" else
                      "Update complete. Restart Runcom.") if kind == "installed" else
                     ("Ingen nyare release finns." if LANGUAGE == "sv" else "No newer release is available."))
             messagebox.showinfo(title, text, parent=self)
+        self._update_running = False
+        self._update_automatic = False
         self.btn_update.config(state="normal")
 
     def open_help(self):
@@ -2168,6 +2211,10 @@ class App(tk.Tk):
         self.terminal.close()
         self._closing = True
         self.after_cancel(self._queue_after)
+        automatic_update_after = self.__dict__.get('_automatic_update_after')
+        if automatic_update_after is not None:
+            self.after_cancel(automatic_update_after)
+            self._automatic_update_after = None
         if self._stop_after is not None:
             self.after_cancel(self._stop_after)
         self.destroy()

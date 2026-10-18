@@ -104,7 +104,7 @@ On the first launch, a bilingual graphical dialog asks the user to choose Swedis
 
 ## Updates in the app
 
-Click **Uppdatera / Update** next to Help to check the latest published GitHub release. Confirm to install it, then restart Runcom. Checks and downloads run in the background. Scripts and language preferences are preserved. Older or diverged releases are not installed. Existing installations without version metadata need to run the updated installer once. Git checkouts must have no uncommitted changes.
+Installed copies automatically check for the latest published GitHub release at startup and install newer releases in the background without a confirmation dialog. The update is used on the next launch, so open editor contents are never discarded by an automatic restart. Scripts and language preferences are preserved. The **Uppdatera / Update** button remains available for manual checks. Development checkouts are never changed automatically; older or diverged releases are not installed. Existing installations without version metadata need to run the updated installer once.
 
 ## Uninstall
 
