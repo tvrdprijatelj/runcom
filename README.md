@@ -25,7 +25,7 @@ Tkinter prerequisites:
 
 ## Help
 
-Click **Hjälp** in the app or press **F1** for the detailed Swedish guide and FAQ. The installer includes `help.html`, `help.css` and `style.css` for offline reading. A standalone `runcom.py` falls back to the online guide: https://tvrdprijatelj.github.io/runcom/help.html. The website also has a Hjälp button.
+Click **Hjälp / Help** in the app or press **F1** for the current Swedish or English guide. The installer includes `help.html`, `help_en.html`, `help.css` and `style.css` for offline reading. A standalone `runcom.py` falls back to the matching online guide. The website also links to Help in the selected language.
 
 ## Use
 
@@ -98,7 +98,7 @@ API contract: https://docs.github.com/en/rest/pages/pages#update-information-abo
 
 Tests: `python3 -m unittest discover -s tests -p test_pages_switcher.py -v`.
 
-The Swedish and English download pages install the matching app language. Commands pass `--lang sv|en` (Bash) or `-Language sv|en` (PowerShell). Download buttons provide language-specific installers for current main. The selection is stored beside the app in `runcom-language` and retained by updates without a language argument. Older releases without English support reject English installation; use current main. The detailed help guide remains in Swedish.
+The Swedish and English download pages install the matching app language. Commands pass `--lang sv|en` (Bash) or `-Language sv|en` (PowerShell). Download buttons provide language-specific installers for current main. The selection is stored beside the app in `runcom-language` and retained by updates without a language argument. Older releases without English support reject English installation; use current main. The app opens the matching Swedish or English help guide.
 
 ## Updates in the app
 

@@ -187,7 +187,17 @@ class ApplicationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             with patch.object(runcom, '__file__', str(Path(folder)/'runcom.py')), patch.object(runcom.webbrowser, 'open', return_value=True) as browser:
                 app.open_help()
-            browser.assert_called_once_with(runcom.HELP_URL, new=2)
+            browser.assert_called_once_with(runcom.HELP_URLS['sv'], new=2)
+
+    def test_english_help_uses_english_page(self):
+        app = self.app()
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / 'runcom.py'
+            guide = Path(folder) / 'help_en.html'
+            guide.write_text('<h1>Help</h1>')
+            with patch.object(runcom, 'LANGUAGE', 'en'), patch.object(runcom, '__file__', str(source)), patch.object(runcom.webbrowser, 'open', return_value=True) as browser:
+                app.open_help()
+            browser.assert_called_once_with(guide.resolve().as_uri(), new=2)
 
     def test_help_reports_browser_launch_failure(self):
         app = self.app()

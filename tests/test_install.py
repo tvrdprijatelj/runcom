@@ -141,10 +141,10 @@ else:
     def test_help_assets_are_available_offline(self):
         self.archive({'release/runcom.py': 'print("installed")',
                       **{'release/'+name: (ROOT/name).read_bytes()
-                         for name in ('help.html','help.css','style.css','runcom.png','runcom.ico')}})
+                         for name in ('help.html','help_en.html','help.css','style.css','runcom.png','runcom.ico')}})
         result = self.run_installer('--ref','main')
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-        for name in ('help.html','help.css','style.css','runcom.png','runcom.ico'):
+        for name in ('help.html','help_en.html','help.css','style.css','runcom.png','runcom.ico'):
             self.assertEqual((self.install/name).read_bytes(),(ROOT/name).read_bytes())
 
     def test_ref_is_url_encoded(self):

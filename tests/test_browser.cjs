@@ -59,18 +59,18 @@ const server = http.createServer((request,response)=>{
         await page.locator('#uninstall-copy').click();
         await page.waitForFunction(()=>/kopierades|copied/.test(document.getElementById('uninstall-status').textContent));
         await page.screenshot({path:path.join(root,`.test-artifacts/uninstall-${lang}-${width}.png`),fullPage:true});
-        await page.getByRole('link',{name:lang==='sv'?'Hjälp':'Hjälp (svenska)',exact:true}).click();
-        assert.ok(page.url().endsWith('/help.html'));
+        await page.getByRole('link',{name:lang==='sv'?'Hjälp':'Help',exact:true}).click();
+        assert.ok(page.url().endsWith(lang==='sv'?'/help.html':'/help_en.html'));
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        assert.equal(await page.locator('.guide-section').count(),10);
-        assert.equal(await page.locator('#faq details').count(),17);
-        const question = page.locator('#faq details').first();
+        assert.equal(await page.locator('.guide-section').count(),9);
+        assert.equal(await page.locator('#troubleshooting details').count(),5);
+        const question = page.locator('#troubleshooting details').first();
         await question.locator('summary').click();
         assert.equal(await question.evaluate(node=>node.open),true);
-        await page.screenshot({path:path.join(root,`.test-artifacts/help-${width}.png`),fullPage:true});
+        await page.screenshot({path:path.join(root,`.test-artifacts/help-${lang}-${width}.png`),fullPage:true});
       }
       await page.goto('file://' + path.join(root,'help.html'));
-      assert.equal(await page.locator('#faq details').count(),17);
+      assert.equal(await page.locator('#troubleshooting details').count(),5);
       assert.equal(await page.locator('body').evaluate(node=>getComputedStyle(node).backgroundColor),'rgb(12, 18, 28)');
       assert.deepEqual(errors,[]);
       await context.close();

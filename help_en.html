@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Current Runcom user guide: scripts, terminal, sudo, files, shortcuts, and troubleshooting.">
+  <title>Help — Runcom</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="help.css">
+</head>
+<body>
+<a class="skip-link" href="#guide">Skip to the guide</a>
+<nav aria-label="Main navigation">
+  <a class="brand" href="index.html">runcom<span>_</span></a>
+  <div><a class="help-link" href="help.html" lang="sv">Svenska</a><a class="help-link" aria-current="page" href="help_en.html">English</a><a href="download_en.html">Download</a><a href="https://github.com/tvrdprijatelj/runcom">GitHub ↗</a></div>
+</nav>
+<main>
+  <header class="help-hero">
+    <div class="eyebrow">User guide · current version</div>
+    <h1>Help with Runcom.</h1>
+    <p>Create, edit, and run scripts in one focused workspace. This guide covers the redesigned interface, built-in terminal, and graphical sudo authentication.</p>
+    <div class="actions"><a class="button" href="#first-script">Create your first script →</a><a class="button secondary" href="#terminal-sudo">Terminal and sudo</a></div>
+  </header>
+  <div class="help-layout">
+    <aside class="help-toc" aria-label="Contents">
+      <h2>On this page</h2>
+      <ol><li><a href="#overview">Overview</a></li><li><a href="#interface">Interface</a></li><li><a href="#first-script">First script</a></li><li><a href="#running">Run modes</a></li><li><a href="#terminal-sudo">Terminal and sudo</a></li><li><a href="#files">Files</a></li><li><a href="#shortcuts">Shortcuts</a></li><li><a href="#troubleshooting">Troubleshooting</a></li><li><a href="#uninstall-guide">Uninstall</a></li></ol>
+      <p>Press <kbd>F1</kbd> in Runcom to open Help.</p>
+    </aside>
+    <article id="guide">
+      <section id="overview" class="guide-section">
+        <h2>1. What is Runcom?</h2>
+        <p>Runcom is a script editor for Linux, macOS, and Windows. It combines a file list, code editor, output panel, and interactive terminal. The app opens on the <strong>Scripts</strong> tab. Its logo and color theme are used throughout the interface; the terminal has a black background and green text.</p>
+        <table><thead><tr><th>System</th><th>Supported scripts</th></tr></thead><tbody><tr><td>Linux and macOS</td><td>Python, Bash, and other text scripts with a valid shebang.</td></tr><tr><td>Windows</td><td>Batch (.bat/.cmd), PowerShell (.ps1), and Python (.py).</td></tr></tbody></table>
+        <p>Runcom requires Python 3.8 or later with Tkinter. Start on the <a href="download_en.html#install">download page</a> for operating-system-specific installation commands.</p>
+      </section>
+      <section id="interface" class="guide-section">
+        <h2>2. The interface</h2>
+        <table><thead><tr><th>Area</th><th>Purpose</th></tr></thead><tbody>
+          <tr><td>Scripts</td><td>Lists files in the selected folder. The search field filters names; double-click or press Enter to open a file.</td></tr>
+          <tr><td>Editor</td><td>Write and edit your script here. A dot before the filename indicates unsaved changes.</td></tr>
+          <tr><td>Output</td><td>Shows output and the exit code from <strong>Run here</strong>. This panel does not accept keyboard input.</td></tr>
+          <tr><td>Terminal</td><td>A persistent interactive terminal with a black background and green text. Use it for normal commands and sudo.</td></tr>
+          <tr><td>Settings</td><td>Shows sudo status and provides sudo activation and uninstallation controls.</td></tr>
+        </tbody></table>
+        <p>Drag the dividers to resize the file list, editor, and output panel.</p>
+      </section>
+      <section id="first-script" class="guide-section">
+        <h2>3. Create and run your first script</h2>
+        <ol><li>Select <strong>New</strong> or press <kbd>Ctrl</kbd>+<kbd>N</kbd>.</li><li>Enter a name such as <code>hello.py</code> or <code>hello.sh</code>. Runcom creates a template for that language.</li><li>Edit the code and save with <kbd>Ctrl</kbd>+<kbd>S</kbd>.</li><li>Press <kbd>F5</kbd> to run it inside the app. Output and the exit code appear below the editor.</li></ol>
+        <pre><code>#!/usr/bin/env python3
+
+name = input("What is your name? ")
+print(f"Hello, {name}!")</code></pre>
+        <p>The example above requires input, so run it in a separate terminal with <kbd>F6</kbd>.</p>
+      </section>
+      <section id="running" class="guide-section">
+        <h2>4. Choose the right run mode</h2>
+        <table><thead><tr><th>Mode</th><th>Use it for</th></tr></thead><tbody>
+          <tr><td>Run here (F5)</td><td>Non-interactive scripts. Output appears in the app and the <strong>Stop</strong> button can terminate the process.</td></tr>
+          <tr><td>Run in terminal (F6)</td><td>Scripts that request input or use interactive or full-screen terminal programs.</td></tr>
+          <tr><td>Run with sudo (F8)</td><td>Linux/macOS: runs the entire script with sudo in the built-in terminal.</td></tr>
+          <tr><td>Run as administrator</td><td>Windows: opens the system UAC prompt and runs the script with administrator privileges.</td></tr>
+        </tbody></table>
+        <p>If a Unix shell script contains a real <code>sudo</code> command, Runcom detects it and automatically sends the entire script through the secure sudo flow in the terminal. Comments and ordinary text should not trigger this behavior.</p>
+      </section>
+      <section id="terminal-sudo" class="guide-section">
+        <h2>5. Built-in terminal and sudo</h2>
+        <h3>The terminal</h3>
+        <p>Open the <strong>Terminal</strong> tab or press <kbd>F7</kbd>. Type commands directly in the terminal area. <kbd>Ctrl</kbd>+<kbd>C</kbd> interrupts a command and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> pastes. <strong>Restart terminal</strong> creates a fresh session.</p>
+        <h3>Graphical sudo authentication</h3>
+        <p>On Linux and macOS, Runcom requests your sudo password in a graphical masked dialog when the app opens. The password is sent directly to the system <code>sudo</code> process through the terminal session. It is never stored in a file, environment variable, or command line. No dialog appears if passwordless sudo is configured.</p>
+        <p>Sudo authorization is kept active while Runcom is open. You can inspect its status, enable it again, or disable session maintenance in <strong>Settings</strong> or on the Terminal tab. Cancelling the password dialog does not prevent you from using Runcom without sudo.</p>
+      </section>
+      <section id="files" class="guide-section">
+        <h2>6. Files, folders, and safe saving</h2>
+        <p><strong>Open</strong> can switch to the opened file's folder. <strong>Change folder</strong> chooses the folder shown in the file list. <strong>Save as</strong> creates a new file association. <strong>Delete</strong> permanently removes the selected file after confirmation.</p>
+        <p>Runcom warns about unsaved changes and files modified outside the app. Python and Unix files use UTF-8. PowerShell uses UTF-8 with a BOM, while batch files use the Windows OEM encoding.</p>
+      </section>
+      <section id="shortcuts" class="guide-section">
+        <h2>7. Keyboard shortcuts</h2>
+        <table><thead><tr><th>Action</th><th>Shortcut</th></tr></thead><tbody><tr><td>New / Open / Save / Save as</td><td>Ctrl+N / Ctrl+O / Ctrl+S / Ctrl+Shift+S</td></tr><tr><td>Run here</td><td>F5</td></tr><tr><td>Run in a separate terminal</td><td>F6</td></tr><tr><td>Built-in terminal</td><td>F7</td></tr><tr><td>Run with sudo</td><td>F8</td></tr><tr><td>Help</td><td>F1</td></tr></tbody></table>
+        <p>On macOS, Command also works for file actions. Some keyboards require <kbd>Fn</kbd> with function keys.</p>
+      </section>
+      <section id="troubleshooting" class="guide-section">
+        <h2>8. Troubleshooting</h2>
+        <details><summary>Why does nothing happen when my script requests input?</summary><p><strong>Run here</strong> has no standard input. Use F6 or the built-in terminal for programs that call Python <code>input()</code>, Bash <code>read</code>, or similar functions.</p></details>
+        <details><summary>Why is sudo not working?</summary><p>Check that <code>sudo</code> is installed and that your account is allowed to use it. Open Settings and select <strong>Enable sudo</strong>. You can retry after cancelling or entering an incorrect password.</p></details>
+        <details><summary>Why does the app fail to start?</summary><p>Verify that Python 3.8+ and Tkinter are installed. Ubuntu/Debian commonly use <code>python3-tk</code>, Arch uses <code>tk</code>, and Fedora uses <code>python3-tkinter</code>.</p></details>
+        <details><summary>Why can my script not find a file or program?</summary><p>The script's working directory is the folder containing the script. Check relative paths and verify that external programs are available on PATH in Runcom's environment.</p></details>
+        <details><summary>Why is older output missing?</summary><p>Runcom limits visible output to keep the interface responsive. Have the script write a log file if you need a complete history.</p></details>
+      </section>
+      <section id="uninstall-guide" class="guide-section">
+        <h2>9. Update or uninstall</h2>
+        <p>The <strong>Update</strong> button checks for a newer published release while preserving your scripts and language choice. Restart Runcom after an update completes.</p>
+        <p>Uninstall from <strong>Settings → Uninstall Runcom</strong>. Application files and shortcuts are removed, but your own scripts are kept. If the option is unavailable or the installation is older, follow the operating-system-specific steps on the <a href="download_en.html#uninstall">uninstall page</a>.</p>
+      </section>
+      <p class="back-top"><a href="#guide">Back to the top ↑</a></p>
+    </article>
+  </div>
+</main>
+</body>
+</html>
