@@ -2,7 +2,6 @@
 const sv = document.documentElement.lang === 'sv';
 const text = (a,b) => sv ? a : b;
 const os = document.getElementById('os');
-const version = document.getElementById('version');
 const status = document.getElementById('status');
 const prerequisites = {
   arch:'sudo pacman -Syu --needed python tk curl',
@@ -12,38 +11,25 @@ const prerequisites = {
   windows:text('Installera Python från https://www.python.org/downloads/windows/ — välj Tcl/Tk och Python launcher.', 'Install Python from https://www.python.org/downloads/windows/ — include Tcl/Tk and Python launcher.'),
   linux:text('Installera Python 3.8+, Tkinter, venv och curl via din pakethanterare.', 'Install Python 3.8+, Tkinter, venv and curl using your package manager.')
 };
-function mainInstaller(win){
-  const lang = sv ? 'sv' : 'en';
-  if(win){
-    return `# Download the installer, then install the current main branch.\n$ErrorActionPreference = 'Stop'\n$runcomInstallerTemp = Join-Path ([IO.Path]::GetTempPath()) ('runcom-' + [guid]::NewGuid() + '.ps1')\ntry {\n    Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.ps1' -OutFile $runcomInstallerTemp\n    & $runcomInstallerTemp -Ref main @args -Language ${lang}\n} finally {\n    Remove-Item $runcomInstallerTemp -ErrorAction SilentlyContinue\n}\n`;
-  }
-  return `#!/usr/bin/env bash\n# Download the installer, then install the current main branch.\nset -euo pipefail\nRUNCOM_INSTALLER_TEMP="$(mktemp -d)"\ntrap 'rm -rf "$RUNCOM_INSTALLER_TEMP"' EXIT\ncurl -fL https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/install.sh -o "$RUNCOM_INSTALLER_TEMP/install.sh"\nbash "$RUNCOM_INSTALLER_TEMP/install.sh" --ref main "$@" --lang ${lang}\n`;
-}
 function updateOS(){
   const win = os.value === 'windows';
-  const main = version.value === 'main';
   document.getElementById('prerequisites').textContent = prerequisites[os.value];
   const base = 'https://raw.githubusercontent.com/tvrdprijatelj/runcom/main/';
   document.getElementById('command').textContent = win
-    ? `Invoke-WebRequest -UseBasicParsing '${base}install.ps1' -OutFile runcom-install.ps1\npowershell -ExecutionPolicy Bypass -File .\\runcom-install.ps1${main ? ' -Ref main' : ''} -Language ${sv ? 'sv' : 'en'}`
-    : `curl -fL '${base}install.sh' -o runcom-install.sh\nbash runcom-install.sh${main ? ' --ref main' : ''} --lang ${sv ? 'sv' : 'en'}`;
+    ? `Invoke-WebRequest -UseBasicParsing '${base}install.ps1' -OutFile runcom-install.ps1\npowershell -ExecutionPolicy Bypass -File .\\runcom-install.ps1 -Language ${sv ? 'sv' : 'en'}`
+    : `curl -fL '${base}install.sh' -o runcom-install.sh\nbash runcom-install.sh --lang ${sv ? 'sv' : 'en'}`;
   const link = document.getElementById('installer');
-  link.href = main
-    ? 'data:text/plain;charset=utf-8,' + encodeURIComponent(mainInstaller(win))
-    : `install_${sv ? 'sv' : 'en'}.${win ? 'ps1' : 'sh'}`;
+  link.href = `install_${sv ? 'sv' : 'en'}.${win ? 'ps1' : 'sh'}`;
   link.textContent = text('Ladda ner installationsskript', 'Download installer');
   link.download = win ? 'runcom-install.ps1' : 'runcom-install.sh';
   document.getElementById('launch').textContent = win
     ? text('Sök efter Runcom i Start-menyn eller använd skrivbordsgenvägen. Installationen visar också ett startkommando.', 'Find Runcom in the Start menu or use the desktop shortcut. The installer also prints a launch command.')
     : text('Linux: sök efter Runcom i programmenyn. Installationen visar även startkommandot. Standardplats: ~/.local/share/runcom/runcom.', 'Linux: find Runcom in the application menu. The installer also prints a launch command. Default location: ~/.local/share/runcom/runcom.');
-  status.textContent = main
-    ? text('Valt: aktuell källkod på main, inklusive de nya rättningarna.', 'Selected: current source on main, including the latest fixes.')
-    : text('Valt: senaste publicerade release. Den kan vara äldre än rättningarna på main.', 'Selected: latest published release. It may predate fixes on main.');
+  status.textContent = text('Version: senaste publicerade release.', 'Version: latest published release.');
 }
 const platform = navigator.userAgentData?.platform || navigator.platform || '';
 os.value = /Win/i.test(platform) ? 'windows' : /Mac/i.test(platform) ? 'mac' : 'linux';
 os.addEventListener('change', updateOS);
-version.addEventListener('change', updateOS);
 updateOS();
 document.getElementById('copy').addEventListener('click', async()=>{
   try {

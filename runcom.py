@@ -277,6 +277,7 @@ TRANSLATIONS = {
     'Kunde inte starta avinstallationen': 'Could not start uninstallation',
     'Windows-kommandon: skriv på raden och tryck Enter. Interaktiva konsolprogram körs med F6.': 'Windows commands: type on the input line and press Enter. Use F6 for interactive console programs.',
     '▶ Kör vald fil': '▶ Run selected script',
+    'Redigera vald fil': 'Edit selected script',
     'Öppna och kör…': 'Open and run…',
     'Välj en fil i listan först.': 'Select a file in the list first.',
     'Skript': 'Scripts',
@@ -366,7 +367,7 @@ TRANSLATIONS = {
     'Skriv. Kör. Se resultatet.': 'Write. Run. See the output.',
     'Kör i terminal (F6)': 'Run in terminal (F6)',
     'Kör med sudo (F8)': 'Run with sudo (F8)',
-    'Sök filnamn · dubbelklicka för att öppna': 'Search filenames · double-click to open',
+    'Sök filnamn · dubbelklicka för att köra': 'Search filenames · double-click to run',
     'UTDATA': 'OUTPUT',
     'Rensa': 'Clear',
     'Behöver skriptet inmatning? Använd Kör i terminal.': 'Does your script need input? Use Run in terminal.',
@@ -1272,12 +1273,14 @@ class App(tk.Tk):
                                  highlightcolor=c["blue"])
         self.listbox.pack(side="left", fill="both", expand=True)
         sb.config(command=self.listbox.yview)
-        self.listbox.bind("<Double-Button-1>", self._on_list_open)
-        self.listbox.bind("<Return>", self._on_list_open)
+        self.listbox.bind("<Double-Button-1>", self._on_list_run)
+        self.listbox.bind("<Return>", self._on_list_run)
         self.listbox.bind('<Control-Return>', lambda e: self._shortcut(self.run_selected))
+        self.btn_edit_selected = self._button(left, tr('Redigera vald fil'), self.edit_selected)
+        self.btn_edit_selected.pack(fill="x", pady=(10, 5))
         self.btn_run_selected = self._button(left, tr('▶ Kör vald fil'), self.run_selected,
                                              kind="primary", font=("TkDefaultFont", 10, "bold"))
-        self.btn_run_selected.pack(fill="x", pady=(10, 5))
+        self.btn_run_selected.pack(fill="x", pady=(0, 5))
         self.btn_open_run = self._button(left, tr('Öppna och kör…'), self.open_and_run)
         self.btn_open_run.pack(fill="x")
         main.add(left, minsize=210, width=250)
@@ -1704,10 +1707,16 @@ class App(tk.Tk):
             self.listbox.selection_set(i)
             self.listbox.see(i)
 
-    def _on_list_open(self, _e=None):
+    def edit_selected(self):
         sel = self.listbox.curselection()
-        if sel:
-            self.load_path(self.files[sel[0]])
+        if not sel:
+            self._set_status(tr('Välj en fil i listan först.'))
+            return
+        self.load_path(self.files[sel[0]])
+
+    def _on_list_run(self, _event=None):
+        self.run_selected()
+        return 'break'
 
     def run_selected(self):
         if self.proc is not None:
@@ -1716,7 +1725,11 @@ class App(tk.Tk):
         if not selection:
             self._set_status(tr('Välj en fil i listan först.'))
             return
-        self._open_and_run_path(self.files[selection[0]])
+        path = self.files[selection[0]]
+        if path == self.current and not self._prepare_run():
+            return
+        self.tabs.select(0)
+        self._run_path_in_app(path)
 
     def open_and_run(self):
         if self.proc is not None:
@@ -1726,10 +1739,11 @@ class App(tk.Tk):
             self._open_and_run_path(Path(path))
 
     def _open_and_run_path(self, path):
-        if Path(path).absolute() != self.current and not self.load_path(path):
+        path = Path(path).absolute()
+        if path == self.current and not self._prepare_run():
             return
         self.tabs.select(0)
-        self.run_in_app()
+        self._run_path_in_app(path)
 
     # ---------------------------------------------------------- filåtgärder
     def new_file(self):
@@ -1888,6 +1902,16 @@ class App(tk.Tk):
     def _command_for(self, path, keep_open=False):
         return script_command(path, keep_open)
 
+    def _path_uses_sudo(self, path):
+        path = Path(path)
+        if IS_WIN or path.suffix.lower() not in ('.sh', '.bash', '.zsh', '.ksh'):
+            return False
+        try:
+            text = path.read_text(encoding=file_encoding(path))
+        except (OSError, UnicodeDecodeError):
+            return False
+        return contains_sudo_command(text)
+
     def _script_uses_sudo(self):
         return (not IS_WIN and self.current is not None
                 and self.current.suffix.lower() in ('.sh', '.bash', '.zsh', '.ksh')
@@ -1898,9 +1922,16 @@ class App(tk.Tk):
             return
         if not self._prepare_run():
             return
-        path = self.current
-        if self._script_uses_sudo():
+        self._run_path_in_app(self.current)
+
+    def _run_path_in_app(self, path):
+        """Run a saved path without changing which file is open in the editor."""
+        path = Path(path).absolute()
+        if path == self.current and self._script_uses_sudo():
             self._run_in_builtin_terminal(elevated=True, prepared=True)
+            return
+        if path != self.current and self._path_uses_sudo(path):
+            self._run_in_builtin_terminal(elevated=True, prepared=True, path=path)
             return
         try:
             cmd = self._command_for(path)
@@ -2094,11 +2125,12 @@ class App(tk.Tk):
             return
         self._run_in_builtin_terminal(elevated=True)
 
-    def _run_in_builtin_terminal(self, elevated=False, prepared=False):
+    def _run_in_builtin_terminal(self, elevated=False, prepared=False, path=None):
         if not prepared and not self._prepare_run():
             return
+        path = Path(path).absolute() if path is not None else self.current
         try:
-            command = self._command_for(self.current)
+            command = self._command_for(path)
             sudo = shutil.which('sudo')
             if not sudo:
                 raise ValueError(tr('Kommandot sudo hittades inte.'))
@@ -2107,7 +2139,7 @@ class App(tk.Tk):
             if elevated:
                 command = [sudo, '--', *command]
             self.open_terminal()
-            shell_command = ('cd ' + shlex.quote(str(self.current.parent)) + ' && '
+            shell_command = ('cd ' + shlex.quote(str(path.parent)) + ' && '
                              + shlex.join(command))
             self.terminal.authorize_sudo(after=shell_command)
         except (OSError, ValueError) as error:

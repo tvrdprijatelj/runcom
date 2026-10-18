@@ -30,8 +30,8 @@ Click **Hjälp / Help** in the app or press **F1** for the current Swedish or En
 ## Use
 
 - Create a script with Ctrl+N, open with Ctrl+O, save with Ctrl+S, save as with Ctrl+Shift+S. macOS also supports Command.
-- Select a file and click **▶ Kör vald fil** (or Ctrl+Enter in the file list) to open and run it. **Öppna och kör…** picks a file from any folder and runs it. Unsaved changes are checked before switching files; edits to the current script are saved before running.
-- Filter file names in the sidebar. Double-click a file or press Enter to open it.
+- Select a file and click **Redigera vald fil** to open it in the editor. Double-click it, press Enter, or click **▶ Kör vald fil** to run the saved file directly. **Öppna och kör…** picks a file from any folder and runs it. Running another file does not replace unsaved editor contents; edits to the currently open script are saved before that script runs.
+- Filter file names in the sidebar. Selecting a file does not change the editor; use **Redigera vald fil** when you want to edit it.
 - F5 runs in the output panel. F6 runs in an external terminal. F7 opens the built-in command terminal.
 - The Terminal tab keeps a user shell open independently of the editor. Linux/macOS support interactive commands, input, Ctrl+C, history and tab completion through a PTY. This is a line terminal; use F6 for full-screen programs such as nano, vim or top. Windows provides a persistent cmd session with a separate input line; use F6 for interactive console programs. Restart terminal ends the old session and starts in the currently selected scripts folder. Closing Runcom ends its built-in shell.
 - The desktop interface uses the bundled Runcom logo both as its window icon and in the app header, with a unified dark theme for the script library, editor, output and terminal.
@@ -68,7 +68,7 @@ Windows:
 powershell -ExecutionPolicy Bypass -File .\install.ps1 -Ref main
 ```
 
-The download page defaults to current fixes on main and lets you select the latest published release instead. The generated commands download a fresh installer to a fixed filename before running it, avoiding accidentally running an older `install.sh` left in Downloads. A published release can be older than main; the page labels this explicitly.
+The download page installs only the latest published release; there is no version selector. The generated commands download a fresh installer to a fixed filename before running it, avoiding accidentally running an older `install.sh` left in Downloads.
 
 Linux/macOS installs to `${XDG_DATA_HOME:-~/.local/share}/runcom`. The installer prints the full launch command. Set `RUNCOM_INSTALL_DIR` to choose another location. On Linux the installer adds `runcom.desktop` to `${XDG_DATA_HOME:-~/.local/share}/applications`, so you can search for Runcom in the application menu. Windows installs to `%LOCALAPPDATA%\Runcom` and adds Start-menu and desktop shortcuts; use `-InstallDir` to customize the location. Run the installer again to update; scripts in `~/skript` are kept separately.
 
@@ -84,7 +84,7 @@ node tests/test_download.cjs
 
 CI runs Python tests on Linux (3.8, 3.12 and 3.14), Windows and macOS. Linux uses Xvfb for real Tk widget tests. Checks include file preservation on encoding/write failures, external changes, streaming output, bounded queues, actual script execution and stopping, and offline install/update fixtures. Native Windows checks exercise cmd paths containing spaces and `&`, PowerShell parsing, and the Windows installer.
 
-Browser tests use Playwright/Chromium to check Swedish and English pages at desktop and mobile sizes, downloads, version selection and clipboard behavior. CI saves page screenshots as artifacts. These are automated functional checks, not exhaustive testing of every desktop configuration.
+Browser tests use Playwright/Chromium to check Swedish and English pages at desktop and mobile sizes, latest-release downloads and clipboard behavior. CI saves page screenshots as artifacts. These are automated functional checks, not exhaustive testing of every desktop configuration.
 
 For local GUI tests on Linux, use `xvfb-run -a python3 -m unittest discover -s tests -v` or run in a desktop session. Without a display, GUI tests skip; CI sets `RUNCOM_REQUIRE_GUI=1` so display failures cannot pass silently.
 
@@ -98,7 +98,7 @@ API contract: https://docs.github.com/en/rest/pages/pages#update-information-abo
 
 Tests: `python3 -m unittest discover -s tests -p test_pages_switcher.py -v`.
 
-The Swedish and English download pages install the matching app language. Commands pass `--lang sv|en` (Bash) or `-Language sv|en` (PowerShell). Download buttons provide language-specific installers for current main. The selection is stored beside the app in `runcom-language` and retained by updates without a language argument. Older releases without English support reject English installation; use current main. The app opens the matching Swedish or English help guide.
+The Swedish and English download pages install the matching app language. Commands pass `--lang sv|en` (Bash) or `-Language sv|en` (PowerShell). Download buttons provide language-specific installers for the latest published release. The selection is stored beside the app in `runcom-language` and retained by updates without a language argument. The app opens the matching Swedish or English help guide.
 
 On the first launch, a bilingual graphical dialog asks the user to choose Swedish or English. The language can later be changed from **Settings → Language**. Applying the change writes the preference and restarts Runcom so the entire interface and Help use the selected language.
 

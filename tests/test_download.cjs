@@ -7,8 +7,8 @@ const script = fs.readFileSync(path.join(__dirname, '../download.js'), 'utf8');
   for (const lang of ['sv','en']) {
     for (const platform of ['Linux','Win32','MacIntel']) {
       const elements = {};
-      for (const id of ['os','version','status','prerequisites','command','installer','launch','copy','uninstall-os','uninstaller','uninstall-command','uninstall-copy','uninstall-status','uninstall-custom','uninstall-distro','uninstall-menu','uninstall-terminal','uninstall-tools','uninstall-tools-note']) {
-        elements[id] = {value:id === 'version'?'release':'',textContent:'',events:{},addEventListener(event,fn){this.events[event]=fn;}};
+      for (const id of ['os','status','prerequisites','command','installer','launch','copy','uninstall-os','uninstaller','uninstall-command','uninstall-copy','uninstall-status','uninstall-custom','uninstall-distro','uninstall-menu','uninstall-terminal','uninstall-tools','uninstall-tools-note']) {
+        elements[id] = {value:'',textContent:'',events:{},addEventListener(event,fn){this.events[event]=fn;}};
       }
       let clipboard = '';
       const context = {document:{documentElement:{lang},getElementById:id=>elements[id]},navigator:{platform,clipboard:{writeText:async value=>{clipboard=value;}}}};
@@ -17,25 +17,16 @@ const script = fs.readFileSync(path.join(__dirname, '../download.js'), 'utf8');
       assert.ok(!elements.command.textContent.includes('-Ref main'));
       assert.equal(elements.os.value, platform==='Win32'?'windows':platform==='MacIntel'?'mac':'linux');
       for (const os of ['arch','ubuntu','fedora','mac','windows','linux']) {
-        for (const version of ['main','release']) {
-          elements.os.value=os; elements.version.value=version; elements.os.events.change();
-          assert.ok(elements.prerequisites.textContent.length>10);
-          if(version === 'main') {
-            assert.match(elements.installer.href,/^data:text\/plain;charset=utf-8,/);
-            const installer = decodeURIComponent(elements.installer.href.split(',',2)[1]);
-            assert.ok(installer.includes(os==='windows'?'-Ref main':'--ref main'));
-            assert.ok(installer.includes(os==='windows'?`-Language ${lang}`:`--lang ${lang}`));
-          } else {
-            assert.equal(elements.installer.href,`install_${lang}.${os==='windows'?'ps1':'sh'}`);
-          }
-          const command = elements.command.textContent;
-          assert.ok(command.includes(os==='windows'?`-Language ${lang}`:`--lang ${lang}`));
-          assert.match(command,/raw\.githubusercontent\.com\/tvrdprijatelj\/runcom\/main\/install\./);
-          assert.equal(command.includes(os==='windows'?'-Ref main':'--ref main'),version==='main');
-          if(os==='windows') assert.ok(command.includes('.\\runcom-install.ps1'));
-          await elements.copy.events.click();
-          assert.equal(clipboard,command);
-        }
+        elements.os.value=os; elements.os.events.change();
+        assert.ok(elements.prerequisites.textContent.length>10);
+        assert.equal(elements.installer.href,`install_${lang}.${os==='windows'?'ps1':'sh'}`);
+        const command = elements.command.textContent;
+        assert.ok(command.includes(os==='windows'?`-Language ${lang}`:`--lang ${lang}`));
+        assert.match(command,/raw\.githubusercontent\.com\/tvrdprijatelj\/runcom\/main\/install\./);
+        assert.ok(!command.includes(os==='windows'?'-Ref main':'--ref main'));
+        if(os==='windows') assert.ok(command.includes('.\\runcom-install.ps1'));
+        await elements.copy.events.click();
+        assert.equal(clipboard,command);
       }
       for (const selected of ['arch','ubuntu','debian','mint','fedora','opensuse','alpine','linux','mac','windows']) {
         elements['uninstall-os'].value = selected;
@@ -61,5 +52,5 @@ const script = fs.readFileSync(path.join(__dirname, '../download.js'), 'utf8');
       assert.match(elements['uninstall-status'].textContent,/manuellt|manually/);
     }
   }
-  console.log('Download flow: all platforms, languages, versions and clipboard fallback PASS');
+  console.log('Download flow: latest release on all platforms and languages, with clipboard fallback PASS');
 })().catch(error=>{console.error(error);process.exit(1);});

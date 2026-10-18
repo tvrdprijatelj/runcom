@@ -121,6 +121,7 @@ class GuiTests(unittest.TestCase):
             self.app.update()
             self.assertEqual(self.app.btn_run['text'], '▶ Run in app (F5)')
             self.assertEqual(self.app.btn_stop['text'], '■ Stop')
+            self.assertEqual(self.app.btn_edit_selected['text'], 'Edit selected script')
             self.assertEqual(self.app.tabs.tab(self.app.terminal, 'text'), 'Terminal')
             self.assertEqual(runcom.tr('Håll sudo aktivt i sessionen'), 'Keep sudo active while Runcom is open')
             self.assertEqual(runcom.tr('Kör med sudo (F8)'), 'Run with sudo (F8)')
@@ -371,15 +372,23 @@ class GuiTests(unittest.TestCase):
         self.assertEqual(str(self.app.btn_run['state']), 'normal')
         self.assertEqual(str(self.app.btn_stop['state']), 'disabled')
 
-    def test_run_selected_opens_file_and_shows_output(self):
+    def test_edit_button_is_the_only_file_list_action_that_opens_editor(self):
         path = Path(self.folder.name) / 'selected file.py'
         path.write_text('print("selected-run-ok")\n')
         self.app.refresh_list()
         self.app.listbox.selection_set(self.app.files.index(path))
-        self.app.open_terminal()
-        self.app.btn_run_selected.invoke()
-        self.pump_until(lambda: self.app.proc is None)
+        self.app.btn_edit_selected.invoke()
         self.assertEqual(self.app.current, path)
+        self.assertIn('selected-run-ok', self.app.editor.get('1.0', 'end'))
+
+    def test_double_click_action_runs_without_opening_file_in_editor(self):
+        path = Path(self.folder.name) / 'selected file.py'
+        path.write_text('print("selected-run-ok")\n')
+        self.app.refresh_list()
+        self.app.listbox.selection_set(self.app.files.index(path))
+        self.app._on_list_run()
+        self.pump_until(lambda: self.app.proc is None)
+        self.assertIsNone(self.app.current)
         self.assertEqual(self.app.tabs.select(), self.app.tabs.tabs()[0])
         self.assertIn('selected-run-ok', self.app.output.get('1.0', 'end'))
 
@@ -391,15 +400,15 @@ class GuiTests(unittest.TestCase):
         self.pump_until(lambda: self.app.proc is None)
         self.assertIn('picked-run-ok', self.app.output.get('1.0', 'end'))
 
-    def test_quick_run_cancellation_preserves_unsaved_edits(self):
+    def test_open_and_run_preserves_unsaved_editor_and_runs_other_file(self):
         path = Path(self.folder.name) / 'other.py'
-        path.write_text('print("should not run")\n')
+        path.write_text('print("other-file-ran")\n')
         self.app.editor.insert('1.0', 'unsaved edits')
-        with patch.object(runcom.messagebox, 'askyesnocancel', return_value=None):
-            self.app._open_and_run_path(path)
+        self.app._open_and_run_path(path)
+        self.pump_until(lambda: self.app.proc is None)
         self.assertIsNone(self.app.current)
-        self.assertIsNone(self.app.proc)
         self.assertEqual(self.app.editor.get('1.0', 'end-1c'), 'unsaved edits')
+        self.assertIn('other-file-ran', self.app.output.get('1.0', 'end'))
 
     def test_stop_long_running_script(self):
         path = Path(self.folder.name) / 'wait.py'

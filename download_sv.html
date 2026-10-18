@@ -53,7 +53,7 @@
       <section class="panel" id="install">
         <div class="eyebrow">Installation</div>
         <h2>Välj ditt operativsystem</h2>
-        <p>Senaste publicerade release är förvald. Du kan även välja aktuella rättningar på main. Programmet sparas i din användarmapp. Kör installationen igen för att uppdatera.</p>
+        <p>Runcom installerar alltid den senaste publicerade releasen. Programmet sparas i din användarmapp. Kör installationen igen för att uppdatera.</p>
         <label for="os">Operativsystem</label>
         <select id="os">
           <option value="arch">Arch Linux</option>
@@ -63,13 +63,7 @@
           <option value="windows">Windows</option>
           <option value="linux">Övriga Linux</option>
         </select>
-        <p>
-          <label for="version">Version</label>
-          <select id="version">
-            <option value="release" selected>Senaste publicerade release</option>
-            <option value="main">Aktuella rättningar (main)</option>
-          </select>
-        </p>
+        <p><strong>Version:</strong> Senaste publicerade release</p>
         <ol>
           <li>Installera förutsättningarna om de saknas.<pre id="prerequisites"></pre>
           </li>
@@ -93,7 +87,7 @@ powershell -ExecutionPolicy Bypass -File .\runcom-install.ps1</pre>
         <details>
           <summary>Manuell start och felsökning</summary>
           <p>Du kan även hämta källkoden och köra python3 runcom.py (Windows: py runcom.py). Tkinter installeras via systemet, inte pip. Skript som frågar efter text eller lösenord körs bäst i terminalen (F6).</p>
-          <a href="https://github.com/tvrdprijatelj/runcom/archive/refs/heads/main.zip">Ladda ner aktuell källkod (main)</a>
+          <a href="https://github.com/tvrdprijatelj/runcom/releases/latest">Visa källkod för senaste release</a>
         </details>
       </section>
       <section class="panel" id="uninstall">
@@ -120,7 +114,7 @@ powershell -ExecutionPolicy Bypass -File .\runcom-install.ps1</pre>
           <li id="uninstall-menu"></li>
           <li>Läs sökvägen som visas i terminalen. Bekräfta med y eller ja och tryck Enter. Svara n om du vill avbryta.</li>
         </ol>
-        <p>Alternativet följer med nya installationer från main. Saknas genvägen kan du använda terminalmetoden nedan direkt.</p>
+        <p>Alternativet följer med nya installationer. Saknas genvägen kan du använda terminalmetoden nedan direkt.</p>
         <h3>Alternativ 2: hämta avinstalleraren</h3>
         <ol>
           <li id="uninstall-terminal"></li>
