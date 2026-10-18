@@ -69,7 +69,7 @@ print(f"Hello, {name}!")</code></pre>
         <h3>The terminal</h3>
         <p>Open the <strong>Terminal</strong> tab or press <kbd>F7</kbd>. Type commands directly in the terminal area. <kbd>Ctrl</kbd>+<kbd>C</kbd> interrupts a command and <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> pastes. <strong>Restart terminal</strong> creates a fresh session.</p>
         <h3>Graphical sudo authentication</h3>
-        <p>On Linux and macOS, Runcom requests your sudo password in a graphical masked dialog when the app opens. The password is sent directly to the system <code>sudo</code> process through the terminal session. It is never stored in a file, environment variable, or command line. No dialog appears if passwordless sudo is configured.</p>
+        <p>On Linux and macOS, Runcom requests your sudo password in a graphical masked dialog when the app opens. The password is sent directly to the system <code>sudo</code> process through the terminal session. It is never stored in a file, environment variable, or command line. An incorrect password displays a clear error and asks you to try again; an accepted password is confirmed in the status bar. No dialog appears if passwordless sudo is configured.</p>
         <p>Sudo authorization is kept active while Runcom is open. You can inspect its status, enable it again, or disable session maintenance in <strong>Settings</strong> or on the Terminal tab. Cancelling the password dialog does not prevent you from using Runcom without sudo.</p>
       </section>
       <section id="files" class="guide-section">

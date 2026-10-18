@@ -290,6 +290,10 @@ TRANSLATIONS = {
     'Sudo: väntar på lösenord': 'Sudo: waiting for password',
     'Sudo: aktivt under appsessionen': 'Sudo: active',
     'Sudo: autentiseringen avbröts eller löpte ut': 'Sudo: authentication was cancelled or expired',
+    'Fel lösenord. Försök igen.': 'Incorrect password. Try again.',
+    'Sudo-lösenordet kunde inte verifieras.': 'The sudo password could not be verified.',
+    'Lösenordet är korrekt. Sudo är nu aktivt.': 'Password accepted. Sudo is now active.',
+    'Fel sudo-lösenord': 'Incorrect sudo password',
     'Aktivera sudo': 'Enable sudo',
     'Sudo-lösenord': 'Sudo password',
     'Runcom behöver sudo-behörighet för den här appsessionen.': 'Runcom needs sudo access while the app is open.',
@@ -997,8 +1001,11 @@ class TerminalPanel(tk.Frame):
                 elif state == 'expired':
                     self._set_sudo_state(False)
                     self.sudo_state.set(tr('Sudo: autentiseringen avbröts eller löpte ut'))
+                    self.app.after_idle(self.app.sudo_password_rejected)
                 else:
                     self._set_sudo_state(state)
+                    if state is True:
+                        self.app.after_idle(self.app.sudo_password_accepted)
                 data = data[position + len(token):]
                 continue
             held = max((size for token in tokens for size in range(1, len(token))
@@ -1107,6 +1114,7 @@ class App(tk.Tk):
         self._stop_after = None
         self._snapshot = None
         self.files = []
+        self._sudo_password_attempted = False
 
         self._build_ui()
         self._bind_keys()
@@ -1397,6 +1405,14 @@ class App(tk.Tk):
         tk.Label(frame, text=tr('Lösenordet skickas direkt till systemets sudo och sparas aldrig.'),
                  bg=c['surface'], fg=c['muted'], wraplength=430,
                  justify='left', font=('TkDefaultFont', 9)).pack(anchor='w')
+        if self._sudo_password_attempted:
+            self._sudo_password_error = tk.Label(
+                frame, text=tr('Fel lösenord. Försök igen.'), bg=c['surface'], fg='#ff7b86',
+                font=('TkDefaultFont', 9, 'bold'))
+            self._sudo_password_error.pack(anchor='w', pady=(10, 0))
+            self._set_status(tr('Fel lösenord. Försök igen.'))
+        else:
+            self._sudo_password_error = None
 
         actions = tk.Frame(frame, bg=c['surface'])
         actions.pack(fill='x', pady=(20, 0))
@@ -1410,6 +1426,8 @@ class App(tk.Tk):
             window.destroy()
             self._sudo_password_window = None
             self._sudo_password_entry = None
+            if password is None:
+                self._sudo_password_attempted = False
             self.terminal.send('\x03' if password is None else password + '\n')
 
         def submit(_event=None):
@@ -1418,6 +1436,7 @@ class App(tk.Tk):
                 window.bell()
                 entry.focus_set()
                 return 'break'
+            self._sudo_password_attempted = True
             finish(password)
             return 'break'
 
@@ -1437,6 +1456,20 @@ class App(tk.Tk):
         window.geometry('+{}+{}'.format(x, y))
         window.grab_set()
         entry.focus_set()
+
+    def sudo_password_accepted(self):
+        if not self._sudo_password_attempted:
+            return
+        self._sudo_password_attempted = False
+        self._set_status(tr('Lösenordet är korrekt. Sudo är nu aktivt.'))
+
+    def sudo_password_rejected(self):
+        if not self._sudo_password_attempted:
+            return
+        self._sudo_password_attempted = False
+        self._set_status(tr('Sudo-lösenordet kunde inte verifieras.'))
+        messagebox.showerror(tr('Fel sudo-lösenord'),
+                             tr('Sudo-lösenordet kunde inte verifieras.'), parent=self)
 
     def open_terminal(self):
         self.tabs.select(self.terminal)

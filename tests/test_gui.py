@@ -228,6 +228,34 @@ class GuiTests(unittest.TestCase):
         self.assertIsNone(self.app._sudo_password_window)
         self.assertFalse(window.winfo_exists())
 
+    def test_final_wrong_sudo_password_shows_graphical_error(self):
+        self.app._sudo_password_attempted = True
+        with patch.object(runcom.messagebox, 'showerror') as error:
+            self.app.sudo_password_rejected()
+        error.assert_called_once_with(runcom.tr('Fel sudo-lösenord'),
+                                      runcom.tr('Sudo-lösenordet kunde inte verifieras.'),
+                                      parent=self.app)
+        self.assertEqual(self.app.status.cget('text'),
+                         runcom.tr('Sudo-lösenordet kunde inte verifieras.'))
+        self.assertFalse(self.app._sudo_password_attempted)
+
+    def test_wrong_sudo_password_reopens_dialog_then_reports_success(self):
+        with patch.object(self.app.terminal, 'send'):
+            self.app.prompt_sudo_password()
+            self.app._sudo_password_entry.insert(0, 'wrong-secret')
+            self.app._sudo_password_entry.event_generate('<Return>')
+            self.app.update()
+            self.app.prompt_sudo_password()  # sudo requested another attempt
+            self.assertEqual(self.app._sudo_password_error.cget('text'),
+                             runcom.tr('Fel lösenord. Försök igen.'))
+            self.app._sudo_password_entry.insert(0, 'correct-secret')
+            self.app._sudo_password_entry.event_generate('<Return>')
+            self.app.update()
+            self.app.sudo_password_accepted()
+        self.assertEqual(self.app.status.cget('text'),
+                         runcom.tr('Lösenordet är korrekt. Sudo är nu aktivt.'))
+        self.assertFalse(self.app._sudo_password_attempted)
+
     @unittest.skipIf(os.name == 'nt', 'Unix sudo session')
     def test_startup_sudo_opens_graphical_dialog_and_accepts_password(self):
         fake_bin = Path(self.folder.name) / 'graphical-bin'
@@ -259,6 +287,8 @@ class GuiTests(unittest.TestCase):
             self.app._sudo_password_entry.event_generate('<Return>')
             self.pump_until(lambda: log.exists() and 'accepted' in log.read_text())
             self.pump_until(lambda: self.app.terminal.sudo_state.get() == 'Sudo: aktivt under appsessionen')
+            self.pump_until(lambda: self.app.status.cget('text') ==
+                            runcom.tr('Lösenordet är korrekt. Sudo är nu aktivt.'))
         self.assertNotIn('graphical-secret', self.app.terminal.display.get('1.0', 'end'))
 
     @unittest.skipIf(os.name == 'nt', 'Unix sudo session')

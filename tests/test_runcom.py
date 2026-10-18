@@ -159,7 +159,9 @@ class ApplicationTests(unittest.TestCase):
             runcom.tr('Sudo: autentiseringen avbröts eller löpte ut'))
 
         panel._terminal_output('\x1dRUNCOM_SUDO_PASSWORD\x1d')
-        panel.app.after_idle.assert_called_once_with(panel.app.prompt_sudo_password)
+        panel.app.after_idle.assert_any_call(panel.app.sudo_password_accepted)
+        panel.app.after_idle.assert_any_call(panel.app.sudo_password_rejected)
+        panel.app.after_idle.assert_any_call(panel.app.prompt_sudo_password)
 
     @unittest.skipIf(os.name == 'nt', 'Unix sudo routing')
     def test_sudo_script_runs_elevated_after_sudo_authentication(self):
