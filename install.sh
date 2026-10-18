@@ -103,7 +103,7 @@ files.extend([
     (folder / 'runcom.py', (source / 'runcom.py').read_bytes(), 0o600),
     (folder / 'runcom-revision', source.name.rsplit('-', 1)[-1].encode(), 0o600),
 ])
-for name in ('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico', 'uninstall.sh', 'uninstall.ps1'):
+for name in ('help.html', 'help_en.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico', 'uninstall.sh', 'uninstall.ps1'):
     asset = source / name
     if asset.is_file():
         files.append((folder / name, asset.read_bytes(), 0o600))

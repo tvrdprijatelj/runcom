@@ -81,7 +81,7 @@ compile(app.read_bytes(), str(app), 'exec')
     $stage = Join-Path $tmp 'stage'
     New-Item -ItemType Directory -Path $stage | Out-Null
     Copy-Item (Join-Path $folder 'runcom.py') (Join-Path $stage 'runcom.py')
-    foreach ($asset in @('help.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico', 'uninstall.ps1', 'uninstall.sh')) {
+    foreach ($asset in @('help.html', 'help_en.html', 'help.css', 'style.css', 'runcom.png', 'runcom.ico', 'uninstall.ps1', 'uninstall.sh')) {
         $assetSource = Join-Path $folder $asset
         if (Test-Path $assetSource -PathType Leaf) {
             Copy-Item $assetSource (Join-Path $stage $asset)
@@ -94,7 +94,7 @@ compile(app.read_bytes(), str(app), 'exec')
     $installFiles = @'
 import os, pathlib, sys, tempfile
 source, folder = map(pathlib.Path, sys.argv[1:])
-order = ('runcom-language', 'runcom.py', 'runcom-revision', 'help.html', 'help.css',
+order = ('runcom-language', 'runcom.py', 'runcom-revision', 'help.html', 'help_en.html', 'help.css',
          'style.css', 'runcom.png', 'runcom.ico', 'uninstall.ps1', 'uninstall.sh')
 
 def replace(path, data):

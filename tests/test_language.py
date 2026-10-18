@@ -17,7 +17,7 @@ class LanguageTests(unittest.TestCase):
             return runpy.run_path(str(app))
 
     def test_installed_languages_and_templates(self):
-        for lang, help_text, greeting in [('sv', 'Hjälp', 'Hej'), ('en', 'Help (Swedish)', 'Hello')]:
+        for lang, help_text, greeting in [('sv', 'Hjälp', 'Hej'), ('en', 'Help', 'Hello')]:
             app = self.load(lang)
             self.assertEqual(app['tr']('Hjälp'), help_text)
             for suffix in ('.py', '.sh', '.bat', '.ps1'):

@@ -40,7 +40,10 @@ NEW_CONSOLE = getattr(subprocess, "CREATE_NEW_CONSOLE", 0x00000010)
 
 DEFAULT_DIR = Path.home() / "skript"
 DEFAULT_EXT = ".bat" if IS_WIN else ".sh"
-HELP_URL = "https://tvrdprijatelj.github.io/runcom/help.html"
+HELP_URLS = {
+    "sv": "https://tvrdprijatelj.github.io/runcom/help.html",
+    "en": "https://tvrdprijatelj.github.io/runcom/help_en.html",
+}
 
 GITHUB_API = "https://api.github.com/repos/tvrdprijatelj/runcom"
 
@@ -189,7 +192,7 @@ def install_release(folder, release):
     # Fetch all files before touching the installation; keep backups for rollback.
     revision = urllib.parse.quote(release["revision"], safe="")
     files = {}
-    for name in ("runcom.py", "help.html", "help.css", "style.css", "runcom.png", "runcom.ico",
+    for name in ("runcom.py", "help.html", "help_en.html", "help.css", "style.css", "runcom.png", "runcom.ico",
                  "uninstall.sh", "uninstall.ps1"):
         url = "https://raw.githubusercontent.com/tvrdprijatelj/runcom/" + revision + "/" + name
         request = urllib.request.Request(url, headers={"User-Agent": "Runcom-updater"})
@@ -296,7 +299,7 @@ TRANSLATIONS = {
     'Kör…': 'Running…',
     "; echo; printf '[Klart - tryck Enter för att stänga] '; read -r _x": "; echo; printf '[Done - press Enter to close] '; read -r _x",
     'Skriptets shebang saknar ett program.': 'The script shebang is missing an interpreter.',
-    'Hjälp': 'Help (Swedish)',
+    'Hjälp': 'Help',
     'Spara som…': 'Save as…',
     'Ta bort': 'Delete',
     'Byt mapp…': 'Change folder…',
@@ -1435,8 +1438,9 @@ class App(tk.Tk):
         self.btn_update.config(state="normal")
 
     def open_help(self):
-        local = Path(__file__).resolve().with_name("help.html")
-        url = local.as_uri() if local.is_file() else HELP_URL
+        name = "help_en.html" if LANGUAGE == "en" else "help.html"
+        local = Path(__file__).resolve().with_name(name)
+        url = local.as_uri() if local.is_file() else HELP_URLS[LANGUAGE]
         try:
             if webbrowser.open(url, new=2):
                 return
