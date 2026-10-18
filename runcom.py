@@ -44,6 +44,27 @@ HELP_URL = "https://tvrdprijatelj.github.io/runcom/help.html"
 
 GITHUB_API = "https://api.github.com/repos/tvrdprijatelj/runcom"
 
+THEME = {
+    "bg": "#090f18",
+    "header": "#0c1420",
+    "surface": "#121d2a",
+    "surface_alt": "#172536",
+    "editor": "#0c1623",
+    "terminal": "#09121d",
+    "border": "#26384d",
+    "text": "#edf5ff",
+    "muted": "#91a5bd",
+    "faint": "#60758f",
+    "blue": "#2e9fff",
+    "blue_hover": "#2387dc",
+    "violet": "#8b5cf6",
+    "green": "#24a66a",
+    "green_hover": "#1d8b59",
+    "red": "#d45162",
+    "red_hover": "#b63f50",
+    "selection": "#1e5784",
+}
+
 
 # Run outside the installation so Windows can remove the venv after Runcom exits.
 UNINSTALL_WORKER = r"""
@@ -311,6 +332,11 @@ TRANSLATIONS = {
     'UTDATA': 'OUTPUT',
     'Rensa': 'Clear',
     'Behöver skriptet inmatning? Använd Kör i terminal.': 'Does your script need input? Use Run in terminal.',
+    'REDIGERARE': 'EDITOR',
+    'Ingen fil vald': 'No file selected',
+    'FILÅTGÄRDER': 'FILE ACTIONS',
+    'KÖRNING': 'RUN',
+    'Sök skript…': 'Search scripts…',
     'Kunde inte läsa mappen: ': 'Could not read the folder: ',
     'Filen innehåller tecken som inte finns i batchfilernas teckentabell (': 'The file contains characters not supported by the batch encoding (',
     '). Ta bort dem eller använd en .ps1-fil.': '). Remove them or use a .ps1 file.',
